@@ -1,0 +1,58 @@
+:root {
+  --background: #f2f2f7;
+  --card-bg: #ffffff;
+  --text-primary: #000000;
+  --text-secondary: #8e8e93;
+  --text-tertiary: #c7c7cc;
+  --accent: #007aff;
+  --danger: #ff3b30;
+  --border: #c6c6c8;
+  --section-header: #6d6d72;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  height: 100%;
+}
+
+body {
+  color: var(--text-primary);
+  background: var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Global page container - accounts for bottom nav */
+.page {
+  min-height: 100vh;
+  padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Section styling used across pages */
+.sectionHeader {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--section-header);
+  padding: 24px 16px 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.section {
+  background: var(--card-bg);
+  border-top: 0.5px solid var(--border);
+  border-bottom: 0.5px solid var(--border);
+}

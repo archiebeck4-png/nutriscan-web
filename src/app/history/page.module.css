@@ -1,0 +1,38 @@
+.container {
+  min-height: 100vh;
+  background: #f2f2f7;
+}
+
+.title {
+  font-size: 34px;
+  font-weight: 700;
+  padding: 16px 16px 8px;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #8e8e93;
+}
+
+.list {
+  margin-top: 8px;
+}
+
+.entryRow {
+  position: relative;
+}
+
+.deleteButton {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #ff3b30;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 8px;
+  z-index: 1;
+}

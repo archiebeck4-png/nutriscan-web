@@ -1,0 +1,30 @@
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #ffffff;
+  border-bottom: 0.5px solid #c6c6c8;
+}
+
+.label {
+  font-size: 16px;
+  color: #000000;
+  flex: 1;
+}
+
+.input {
+  font-size: 16px;
+  color: #000000;
+  text-align: right;
+  width: 100px;
+  padding: 4px 8px;
+  background: #f2f2f7;
+  border: none;
+  border-radius: 6px;
+  outline: none;
+}
+
+.input::placeholder {
+  color: #c7c7cc;
+}

@@ -1,0 +1,48 @@
+import type { Metadata, Viewport } from 'next';
+import './globals.css';
+import ClientLayout from './client-layout';
+
+export const metadata: Metadata = {
+  title: 'NutriScan',
+  description: 'Scan and log nutrition labels from food packaging',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'NutriScan',
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#007AFF',
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <head>
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+      </head>
+      <body>
+        <ClientLayout>{children}</ClientLayout>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js');
+              }
+            `,
+          }}
+        />
+      </body>
+    </html>
+  );
+}
