@@ -1,0 +1,140 @@
+.container {
+  padding: 16px;
+  padding-top: max(16px, env(safe-area-inset-top, 0px));
+}
+
+.title {
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 16px 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.label {
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.value {
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+.editBtn {
+  float: right;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 8px;
+}
+
+.input {
+  width: 80px;
+  text-align: right;
+  font-size: 16px;
+  color: var(--text-primary);
+  background: var(--background);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  outline: none;
+}
+
+.select {
+  font-size: 15px;
+  color: var(--text-primary);
+  background: var(--background);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  outline: none;
+  text-align: right;
+}
+
+.miniSegmented {
+  display: flex;
+  background: rgba(118, 118, 128, 0.12);
+  border-radius: 7px;
+  padding: 2px;
+}
+
+.miniSeg {
+  padding: 4px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.miniSegActive {
+  background: var(--card-bg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.editActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.cancelBtn {
+  font-size: 16px;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 16px;
+}
+
+.saveBtn {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  cursor: pointer;
+}
+
+.dangerRow {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  font-size: 16px;
+  color: var(--danger);
+  background: none;
+  border: none;
+  border-bottom: 0.5px solid var(--border);
+  cursor: pointer;
+}
+
+.dangerRow:last-child {
+  border-bottom: none;
+}
+
+.dangerRow:active {
+  background: rgba(255, 59, 48, 0.05);
+}

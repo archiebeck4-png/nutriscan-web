@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useScanData } from '../../context/ScanContext';
-import { insertEntry } from '../../lib/db';
-import { ScannedNutrition, WebFoodEntry } from '../../models/types';
-import NutrientField from '../../components/NutrientField';
+import { useScanData } from '../../../context/ScanContext';
+import { insertEntry, addFoodLogEntry } from '../../../lib/db';
+import { todayDateString } from '../../../lib/dates';
+import type { ScannedNutrition, WebFoodEntry, FoodLogEntry } from '../../../models/types';
+import NutrientField from '../../../components/NutrientField';
 import styles from './page.module.css';
 
 export default function ReviewPage() {
@@ -20,23 +21,25 @@ export default function ReviewPage() {
       proteinPerServing: '',
       fatPerServing: '',
       carbsPerServing: '',
+      fiberPerServing: '',
       energyPer100g: '',
       proteinPer100g: '',
       fatPer100g: '',
       carbsPer100g: '',
+      fiberPer100g: '',
       rawText: '',
     }
   );
+  const [servingsConsumed, setServingsConsumed] = useState('1');
   const [showRawText, setShowRawText] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // If no scan data, redirect back
   if (!scanData) {
     return (
       <div className={styles.centered}>
         <p>No scan data. Go back and scan a label first.</p>
-        <button className={styles.actionButton} onClick={() => router.push('/')}>
-          Back to Scan
+        <button className={styles.actionButton} onClick={() => router.push('/add')}>
+          Back
         </button>
       </div>
     );
@@ -57,27 +60,50 @@ export default function ReviewPage() {
     setIsSaving(true);
 
     try {
+      const entryId = crypto.randomUUID();
+      const foodName = nutrition.foodName.trim() || 'Unknown Food';
+
+      // 1. Save to food library
       const entry: WebFoodEntry = {
-        id: crypto.randomUUID(),
-        foodName: nutrition.foodName.trim() || 'Unknown Food',
+        id: entryId,
+        foodName,
         dateScanned: new Date().toISOString(),
         energyPerServing: parseNum(nutrition.energyPerServing),
         proteinPerServing: parseNum(nutrition.proteinPerServing),
         fatPerServing: parseNum(nutrition.fatPerServing),
         carbsPerServing: parseNum(nutrition.carbsPerServing),
+        fiberPerServing: parseNum(nutrition.fiberPerServing),
         energyPer100g: parseNum(nutrition.energyPer100g),
         proteinPer100g: parseNum(nutrition.proteinPer100g),
         fatPer100g: parseNum(nutrition.fatPer100g),
         carbsPer100g: parseNum(nutrition.carbsPer100g),
+        fiberPer100g: parseNum(nutrition.fiberPer100g),
         servingSize: nutrition.servingSize.trim() || null,
         servingsPerPackage: nutrition.servingsPerPackage.trim() || null,
         rawOcrText: nutrition.rawText || null,
         imageBlob: scanData.imageBlob,
       };
-
       await insertEntry(entry);
+
+      // 2. Add to today's food log
+      const qty = parseFloat(servingsConsumed) || 1;
+      const logEntry: FoodLogEntry = {
+        id: crypto.randomUUID(),
+        date: todayDateString(),
+        createdAt: new Date().toISOString(),
+        foodName,
+        energyKj: (parseNum(nutrition.energyPerServing) ?? 0) * qty,
+        proteinG: (parseNum(nutrition.proteinPerServing) ?? 0) * qty,
+        fatG: (parseNum(nutrition.fatPerServing) ?? 0) * qty,
+        carbsG: (parseNum(nutrition.carbsPerServing) ?? 0) * qty,
+        fiberG: (parseNum(nutrition.fiberPerServing) ?? 0) * qty,
+        savedFoodId: entryId,
+        source: 'scan',
+      };
+      await addFoodLogEntry(logEntry);
+
       setScanData(null);
-      router.push('/history');
+      router.push('/');
     } catch (error) {
       console.error('Failed to save entry:', error);
       alert('Failed to save. Please try again.');
@@ -88,12 +114,11 @@ export default function ReviewPage() {
 
   const handleCancel = () => {
     setScanData(null);
-    router.push('/');
+    router.push('/add');
   };
 
   return (
     <div className={styles.container}>
-      {/* Header */}
       <div className={styles.header}>
         <button className={styles.cancelButton} onClick={handleCancel}>
           Cancel
@@ -104,11 +129,10 @@ export default function ReviewPage() {
           onClick={handleSave}
           disabled={isSaving}
         >
-          {isSaving ? 'Saving...' : 'Save'}
+          {isSaving ? 'Saving...' : 'Log'}
         </button>
       </div>
 
-      {/* Form */}
       <div className={styles.form}>
         {/* Food Details */}
         <div className="sectionHeader">FOOD DETAILS</div>
@@ -136,8 +160,20 @@ export default function ReviewPage() {
             <input
               className={styles.textInput}
               value={nutrition.servingsPerPackage}
-              onChange={(e) => updateField('servingsPerPackage', e.target.value)}
+              onChange={(e) =>
+                updateField('servingsPerPackage', e.target.value)
+              }
               placeholder="e.g. 4"
+              inputMode="decimal"
+            />
+          </div>
+          <div className={styles.textFieldRow}>
+            <label className={styles.fieldLabel}>Servings eaten</label>
+            <input
+              className={styles.textInput}
+              value={servingsConsumed}
+              onChange={(e) => setServingsConsumed(e.target.value)}
+              placeholder="1"
               inputMode="decimal"
             />
           </div>
@@ -150,6 +186,7 @@ export default function ReviewPage() {
           <NutrientField label="Protein (g)" value={nutrition.proteinPerServing} onChange={(v) => updateField('proteinPerServing', v)} />
           <NutrientField label="Fat (g)" value={nutrition.fatPerServing} onChange={(v) => updateField('fatPerServing', v)} />
           <NutrientField label="Carbs (g)" value={nutrition.carbsPerServing} onChange={(v) => updateField('carbsPerServing', v)} />
+          <NutrientField label="Fiber (g)" value={nutrition.fiberPerServing} onChange={(v) => updateField('fiberPerServing', v)} />
         </div>
 
         {/* Per 100g */}
@@ -159,6 +196,7 @@ export default function ReviewPage() {
           <NutrientField label="Protein (g)" value={nutrition.proteinPer100g} onChange={(v) => updateField('proteinPer100g', v)} />
           <NutrientField label="Fat (g)" value={nutrition.fatPer100g} onChange={(v) => updateField('fatPer100g', v)} />
           <NutrientField label="Carbs (g)" value={nutrition.carbsPer100g} onChange={(v) => updateField('carbsPer100g', v)} />
+          <NutrientField label="Fiber (g)" value={nutrition.fiberPer100g} onChange={(v) => updateField('fiberPer100g', v)} />
         </div>
 
         {/* Raw OCR Text */}

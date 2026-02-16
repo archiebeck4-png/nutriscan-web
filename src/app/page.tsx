@@ -1,138 +1,148 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCamera } from '../hooks/useCamera';
-import { useOcr } from '../hooks/useOcr';
-import { parseNutritionLabel } from '../parsing/nutritionLabelParser';
-import { useScanData } from '../context/ScanContext';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db, deleteFoodLogEntry } from '../lib/db';
+import { todayDateString, formatDateDisplay, addDays, isToday } from '../lib/dates';
+import { useProfile } from '../context/ProfileContext';
+import EnergyRing from '../components/EnergyRing';
+import MacroProgressBar from '../components/MacroProgressBar';
+import FoodLogItem from '../components/FoodLogItem';
+import EmptyState from '../components/EmptyState';
 import styles from './page.module.css';
 
-export default function ScanPage() {
+export default function DashboardPage() {
   const router = useRouter();
-  const { videoRef, permissionState, isReady, capture, initCamera } = useCamera();
-  const { recognize, isProcessing, isReady: ocrReady, progress } = useOcr();
-  const { setScanData } = useScanData();
-  const [error, setError] = useState<string | null>(null);
+  const { profile } = useProfile();
+  const [selectedDate, setSelectedDate] = useState(todayDateString());
 
-  useEffect(() => {
-    initCamera();
-  }, [initCamera]);
+  const entries = useLiveQuery(
+    () => db.foodLog.where('date').equals(selectedDate).sortBy('createdAt'),
+    [selectedDate]
+  );
 
-  const handleCapture = async () => {
-    if (isProcessing) return;
-    setError(null);
+  const totals = useMemo(() => {
+    if (!entries)
+      return { energyKj: 0, proteinG: 0, fatG: 0, carbsG: 0, fiberG: 0 };
+    return entries.reduce(
+      (acc, e) => ({
+        energyKj: acc.energyKj + e.energyKj,
+        proteinG: acc.proteinG + e.proteinG,
+        fatG: acc.fatG + e.fatG,
+        carbsG: acc.carbsG + e.carbsG,
+        fiberG: acc.fiberG + e.fiberG,
+      }),
+      { energyKj: 0, proteinG: 0, fatG: 0, carbsG: 0, fiberG: 0 }
+    );
+  }, [entries]);
 
-    try {
-      const imageBlob = await capture();
-      const ocrLines = await recognize(imageBlob);
-
-      if (ocrLines.length === 0) {
-        setError('No text detected. Try holding the camera closer to the nutrition label.');
-        return;
-      }
-
-      const nutrition = parseNutritionLabel(ocrLines);
-      setScanData({ nutrition, imageBlob });
-      router.push('/review');
-    } catch (err) {
-      console.error('Scan error:', err);
-      setError('Failed to scan. Please try again.');
+  const handleDelete = async (id: string) => {
+    if (confirm('Delete this food entry?')) {
+      await deleteFoodLogEntry(id);
     }
   };
 
-  // Permission denied
-  if (permissionState === 'denied') {
-    return (
-      <div className={styles.centered}>
-        <h2 className={styles.permissionTitle}>Camera Access Required</h2>
-        <p className={styles.permissionMessage}>
-          NutriScan needs camera access to scan nutrition labels.
-          Please enable camera access in your browser settings.
-        </p>
-      </div>
-    );
-  }
-
-  // Permission prompt
-  if (permissionState === 'prompt' || permissionState === 'loading') {
-    return (
-      <div className={styles.centered}>
-        <h2 className={styles.permissionTitle}>Camera Access</h2>
-        <p className={styles.permissionMessage}>
-          NutriScan needs camera access to scan nutrition labels.
-        </p>
-        <button className={styles.permissionButton} onClick={initCamera}>
-          Enable Camera
-        </button>
-      </div>
-    );
-  }
+  if (!profile) return null;
 
   return (
     <div className={styles.container}>
-      {/* Camera preview */}
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        className={styles.video}
-      />
-
-      {/* Guide overlay */}
-      <div className={styles.overlay}>
-        <div className={styles.guideBox}>
-          <span className={styles.guideText}>
-            Position the nutrition label within the frame
-          </span>
-        </div>
-      </div>
-
-      {/* OCR loading progress */}
-      {!ocrReady && progress && (
-        <div className={styles.progressOverlay}>
-          <div className={styles.progressBadge}>
-            Loading OCR engine... {progress}
-          </div>
-        </div>
-      )}
-
-      {/* Processing overlay */}
-      {isProcessing && (
-        <div className={styles.processingOverlay}>
-          <div className={styles.processingBadge}>
-            Scanning label...
-          </div>
-        </div>
-      )}
-
-      {/* Error message */}
-      {error && (
-        <div className={styles.errorOverlay}>
-          <div className={styles.errorBadge}>
-            {error}
-            <button className={styles.errorDismiss} onClick={() => setError(null)}>
-              OK
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Capture button */}
-      <div className={styles.buttonContainer}>
+      {/* Date navigation */}
+      <div className={styles.dateNav}>
         <button
-          className={styles.captureButton}
-          onClick={handleCapture}
-          disabled={isProcessing || !isReady}
+          className={styles.dateArrow}
+          onClick={() => setSelectedDate(addDays(selectedDate, -1))}
         >
-          <div
-            className={`${styles.captureButtonInner} ${
-              (isProcessing || !isReady) ? styles.disabled : ''
-            }`}
-          />
+          ‹
+        </button>
+        <div className={styles.dateCenter}>
+          <span className={styles.dateText}>
+            {formatDateDisplay(selectedDate)}
+          </span>
+          {isToday(selectedDate) && (
+            <span className={styles.todayBadge}>Today</span>
+          )}
+        </div>
+        <button
+          className={styles.dateArrow}
+          onClick={() => setSelectedDate(addDays(selectedDate, 1))}
+          disabled={isToday(selectedDate)}
+        >
+          ›
         </button>
       </div>
+
+      {/* Energy ring */}
+      <div className={styles.ringSection}>
+        <EnergyRing
+          current={Math.round(totals.energyKj)}
+          target={profile.dailyEnergyTargetKj}
+        />
+      </div>
+
+      {/* Macro bars */}
+      <div className={styles.macroSection}>
+        <MacroProgressBar
+          label="Protein"
+          current={totals.proteinG}
+          target={profile.dailyProteinTargetG}
+          unit="g"
+          color="#34C759"
+        />
+        <MacroProgressBar
+          label="Fat"
+          current={totals.fatG}
+          target={profile.dailyFatTargetG}
+          unit="g"
+          color="#FF9500"
+        />
+        <MacroProgressBar
+          label="Carbs"
+          current={totals.carbsG}
+          target={profile.dailyCarbsTargetG}
+          unit="g"
+          color="#5856D6"
+        />
+        <MacroProgressBar
+          label="Fiber"
+          current={totals.fiberG}
+          target={profile.dailyFiberTargetG}
+          unit="g"
+          color="#AF52DE"
+        />
+      </div>
+
+      {/* Food log */}
+      <div className={styles.logSection}>
+        <div className="sectionHeader">FOOD LOG</div>
+        <div className="section">
+          {entries === undefined ? (
+            <div className={styles.loading}>Loading...</div>
+          ) : entries.length === 0 ? (
+            <EmptyState
+              icon="🍽️"
+              title="No food logged"
+              message="Tap + to add your first meal"
+            />
+          ) : (
+            entries.map((entry) => (
+              <FoodLogItem
+                key={entry.id}
+                entry={entry}
+                onDelete={handleDelete}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Add food button */}
+      <button
+        className={styles.addButton}
+        onClick={() => router.push('/add')}
+      >
+        + Add Food
+      </button>
     </div>
   );
 }

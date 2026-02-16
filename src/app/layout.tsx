@@ -3,13 +3,13 @@ import './globals.css';
 import ClientLayout from './client-layout';
 
 export const metadata: Metadata = {
-  title: 'NutriScan',
-  description: 'Scan and log nutrition labels from food packaging',
+  title: 'ScaleShift',
+  description: 'Track your macros and scan nutrition labels',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'NutriScan',
+    title: 'ScaleShift',
   },
 };
 

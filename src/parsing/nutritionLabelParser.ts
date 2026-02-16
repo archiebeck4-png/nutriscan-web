@@ -21,10 +21,12 @@ export function parseNutritionLabel(ocrLines: string[]): ScannedNutrition {
     proteinPerServing: '',
     fatPerServing: '',
     carbsPerServing: '',
+    fiberPerServing: '',
     energyPer100g: '',
     proteinPer100g: '',
     fatPer100g: '',
     carbsPer100g: '',
+    fiberPer100g: '',
     rawText: ocrLines.join('\n'),
   };
 
@@ -56,6 +58,13 @@ export function parseNutritionLabel(ocrLines: string[]): ScannedNutrition {
   );
   result.carbsPerServing = carbs.perServing;
   result.carbsPer100g = carbs.per100g;
+
+  const fiber = extractNutrientValues(
+    ['dietary fibre', 'dietary fiber', 'fibre', 'fiber'],
+    normalizedLines
+  );
+  result.fiberPerServing = fiber.perServing;
+  result.fiberPer100g = fiber.per100g;
 
   return result;
 }

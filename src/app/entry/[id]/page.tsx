@@ -42,7 +42,7 @@ export default function EntryDetailPage({ params }: { params: Promise<{ id: stri
     if (!entry) return;
     if (confirm(`Delete "${entry.foodName}"?`)) {
       await deleteEntry(entry.id);
-      router.push('/history');
+      router.push('/log');
     }
   };
 
@@ -65,7 +65,7 @@ export default function EntryDetailPage({ params }: { params: Promise<{ id: stri
     <div className={styles.container}>
       {/* Header */}
       <div className={styles.header}>
-        <button className={styles.backButton} onClick={() => router.push('/history')}>
+        <button className={styles.backButton} onClick={() => router.push('/log')}>
           ‹ Back
         </button>
         <h1 className={styles.title}>{entry.foodName}</h1>
@@ -90,6 +90,7 @@ export default function EntryDetailPage({ params }: { params: Promise<{ id: stri
         <NutrientRow label="Protein" value={entry.proteinPerServing} unit="g" />
         <NutrientRow label="Fat" value={entry.fatPerServing} unit="g" />
         <NutrientRow label="Carbs" value={entry.carbsPerServing} unit="g" />
+        <NutrientRow label="Fiber" value={entry.fiberPerServing ?? null} unit="g" />
       </div>
 
       {/* Per 100g */}
@@ -99,6 +100,7 @@ export default function EntryDetailPage({ params }: { params: Promise<{ id: stri
         <NutrientRow label="Protein" value={entry.proteinPer100g} unit="g" />
         <NutrientRow label="Fat" value={entry.fatPer100g} unit="g" />
         <NutrientRow label="Carbs" value={entry.carbsPer100g} unit="g" />
+        <NutrientRow label="Fiber" value={entry.fiberPer100g ?? null} unit="g" />
       </div>
 
       {/* Scanned Image */}

@@ -1,8 +1,10 @@
-const CACHE_NAME = 'nutriscan-v1';
+const CACHE_NAME = 'scaleshift-v1';
 
 const PRECACHE_URLS = [
   '/',
-  '/history',
+  '/add',
+  '/log',
+  '/settings',
 ];
 
 // Install: precache app shell

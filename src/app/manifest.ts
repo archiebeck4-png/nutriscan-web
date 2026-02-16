@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'NutriScan',
-    short_name: 'NutriScan',
-    description: 'Scan and log nutrition labels from food packaging',
+    name: 'ScaleShift',
+    short_name: 'ScaleShift',
+    description: 'Track your macros and scan nutrition labels',
     start_url: '/',
     display: 'standalone',
     background_color: '#f2f2f7',

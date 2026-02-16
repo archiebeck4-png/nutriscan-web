@@ -1,0 +1,132 @@
+.container {
+  min-height: 100vh;
+  background: var(--background);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: var(--background);
+  border-bottom: 0.5px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.backButton {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 17px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.searchWrap {
+  padding: 12px 16px;
+}
+
+.searchInput {
+  width: 100%;
+  font-size: 16px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 10px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.searchInput::placeholder {
+  color: var(--text-tertiary);
+}
+
+.list {
+  padding: 0;
+}
+
+.loading {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--card-bg);
+  border-bottom: 0.5px solid var(--border);
+}
+
+.itemInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.itemName {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemMeta {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.itemActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+
+.qtyInput {
+  width: 48px;
+  font-size: 15px;
+  text-align: center;
+  padding: 6px 4px;
+  border: none;
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.qtyInput::placeholder {
+  color: var(--text-tertiary);
+}
+
+.logBtn {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.logBtn:active {
+  opacity: 0.8;
+}
