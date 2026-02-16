@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCamera } from '../../../hooks/useCamera';
 import { useOcr } from '../../../hooks/useOcr';
 import { useContinuousScan } from '../../../hooks/useContinuousScan';
 import { parseNutritionLabel } from '../../../parsing/nutritionLabelParser';
+import { smartRecognize } from '../../../lib/smartRecognize';
 import { useScanData } from '../../../context/ScanContext';
 import { ScannedNutrition } from '../../../models/types';
 import styles from './page.module.css';
@@ -35,8 +36,10 @@ export default function ScanPage() {
     useCamera();
   const { recognize, isProcessing, isReady: ocrReady, progress } = useOcr();
   const { setScanData } = useScanData();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
+  const [isSmartProcessing, setIsSmartProcessing] = useState(false);
 
   useEffect(() => {
     initCamera();
@@ -53,8 +56,9 @@ export default function ScanPage() {
   );
 
   // Continuous scan hook
+  const anyProcessing = isProcessing || isSmartProcessing;
   const continuousScanEnabled =
-    isReady && ocrReady && !isProcessing && !navigating;
+    isReady && ocrReady && !anyProcessing && !navigating;
   const { isScanning, currentResult, currentScore, stop: stopContinuousScan } =
     useContinuousScan({
       videoRef,
@@ -62,15 +66,16 @@ export default function ScanPage() {
       enabled: continuousScanEnabled,
     });
 
-  // Manual capture fallback — stops continuous scan, does full-quality single capture
+  // Manual capture — stops continuous scan, does full-quality smart recognition
   const handleCapture = async () => {
-    if (isProcessing || navigating) return;
+    if (isProcessing || isSmartProcessing || navigating) return;
     stopContinuousScan();
     setError(null);
+    setIsSmartProcessing(true);
 
     try {
       const imageBlob = await capture();
-      const ocrLines = await recognize(imageBlob);
+      const ocrLines = await smartRecognize(imageBlob);
 
       if (ocrLines.length === 0) {
         setError(
@@ -85,6 +90,43 @@ export default function ScanPage() {
     } catch (err) {
       console.error('Scan error:', err);
       setError('Failed to scan. Please try again.');
+    } finally {
+      setIsSmartProcessing(false);
+    }
+  };
+
+  // Upload a photo from gallery
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || isProcessing || isSmartProcessing || navigating) return;
+    stopContinuousScan();
+    setError(null);
+    setIsSmartProcessing(true);
+
+    try {
+      const imageBlob: Blob = file;
+      const ocrLines = await smartRecognize(imageBlob);
+
+      if (ocrLines.length === 0) {
+        setError(
+          'No text detected in the uploaded image. Try a clearer photo of the nutrition label.',
+        );
+        return;
+      }
+
+      const nutrition = parseNutritionLabel(ocrLines);
+      setScanData({ nutrition, imageBlob });
+      router.push('/add/review');
+    } catch (err) {
+      console.error('Upload scan error:', err);
+      setError('Failed to process the image. Please try again.');
+    } finally {
+      setIsSmartProcessing(false);
+    }
+
+    // Reset so the same file can be re-selected
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -97,6 +139,22 @@ export default function ScanPage() {
           ScaleShift needs camera access to scan nutrition labels. Please enable
           camera access in your browser settings.
         </p>
+        <p className={styles.permissionMessage}>
+          Or upload a photo of a nutrition label instead:
+        </p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleUpload}
+          style={{ display: 'none' }}
+        />
+        <button
+          className={styles.permissionButton}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          Upload Photo
+        </button>
         <button className={styles.backBtn} onClick={() => router.back()}>
           Go Back
         </button>
@@ -220,7 +278,7 @@ export default function ScanPage() {
       )}
 
       {/* Manual processing overlay */}
-      {isProcessing && (
+      {anyProcessing && (
         <div className={styles.processingOverlay}>
           <div className={styles.processingBadge}>
             {progress || 'Scanning label...'}
@@ -243,19 +301,47 @@ export default function ScanPage() {
         </div>
       )}
 
-      {/* Capture button */}
+      {/* Hidden file input for photo upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleUpload}
+        style={{ display: 'none' }}
+      />
+
+      {/* Capture + Upload buttons */}
       <div className={styles.buttonContainer}>
-        <button
-          className={styles.captureButton}
-          onClick={handleCapture}
-          disabled={isProcessing || !isReady || navigating}
-        >
-          <div
-            className={`${styles.captureButtonInner} ${
-              isProcessing || !isReady || navigating ? styles.disabled : ''
-            }`}
-          />
-        </button>
+        <div className={styles.buttonRow}>
+          {/* Upload button */}
+          <button
+            className={styles.uploadButton}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={anyProcessing || navigating}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="18" height="18" rx="3" stroke="white" strokeWidth="1.5"/>
+              <path d="M3 16l5-5 4 4 3-3 6 6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="15.5" cy="8.5" r="1.5" stroke="white" strokeWidth="1.5"/>
+            </svg>
+          </button>
+
+          {/* Capture button */}
+          <button
+            className={styles.captureButton}
+            onClick={handleCapture}
+            disabled={anyProcessing || !isReady || navigating}
+          >
+            <div
+              className={`${styles.captureButtonInner} ${
+                anyProcessing || !isReady || navigating ? styles.disabled : ''
+              }`}
+            />
+          </button>
+
+          {/* Spacer for visual balance */}
+          <div className={styles.uploadButtonSpacer} />
+        </div>
         <span className={styles.captureHint}>
           {isScanning
             ? 'Auto-scanning... tap to capture manually'

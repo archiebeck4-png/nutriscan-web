@@ -1,0 +1,249 @@
+.container {
+  padding: 16px;
+  padding-top: max(16px, env(safe-area-inset-top, 0px));
+  min-height: 100vh;
+  background: var(--background);
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.runButton {
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.runButton:disabled {
+  opacity: 0.5;
+}
+
+.uploadLabel {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 500;
+  padding: 10px 20px;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.labelCard {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.labelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.labelName {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.statusBadge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statusPending {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+}
+
+.statusRunning {
+  background: rgba(108, 92, 231, 0.2);
+  color: #a29bfe;
+}
+
+.statusDone {
+  background: rgba(46, 213, 115, 0.15);
+  color: #2ed573;
+}
+
+.statusError {
+  background: rgba(255, 71, 87, 0.15);
+  color: #ff4757;
+}
+
+.labelDesc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.imagesRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.imageWrapper {
+  width: 50%;
+  position: relative;
+}
+
+.imageLabel {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.imageWrapper img {
+  width: 100%;
+  border-radius: 8px;
+  object-fit: contain;
+  max-height: 300px;
+  background: #111;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 12px 0 6px;
+}
+
+.rawText {
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 10px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+  line-height: 16px;
+}
+
+.nutrientGrid {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 2px 12px;
+  font-size: 13px;
+  align-items: center;
+}
+
+.nutrientHeader {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  padding-bottom: 4px;
+}
+
+.nutrientLabel {
+  color: var(--text-secondary);
+}
+
+.nutrientValue {
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.nutrientMissing {
+  color: var(--text-secondary);
+  opacity: 0.4;
+  text-align: right;
+}
+
+.scoreRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.scoreBadge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.scoreValid {
+  background: rgba(46, 213, 115, 0.2);
+  color: #2ed573;
+}
+
+.scoreInvalid {
+  background: rgba(255, 71, 87, 0.2);
+  color: #ff4757;
+}
+
+.scoreFields {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.timing {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+.errorText {
+  color: #ff4757;
+  font-size: 14px;
+  padding: 8px;
+}
+
+.modeTag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(108, 92, 231, 0.15);
+  color: #a29bfe;
+}

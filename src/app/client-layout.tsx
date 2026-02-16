@@ -25,12 +25,13 @@ function LayoutGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const isOnboarding = pathname.startsWith('/onboarding');
+  const isDebug = pathname.startsWith('/debug');
 
   useEffect(() => {
-    if (!isLoading && !profile && !isOnboarding) {
+    if (!isLoading && !profile && !isOnboarding && !isDebug) {
       router.replace('/onboarding');
     }
-  }, [isLoading, profile, isOnboarding, router]);
+  }, [isLoading, profile, isOnboarding, isDebug, router]);
 
   if (isLoading) {
     return (
@@ -48,8 +49,8 @@ function LayoutGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // On onboarding page — no bottom nav
-  if (isOnboarding) {
+  // On onboarding or debug pages — no bottom nav
+  if (isOnboarding || isDebug) {
     return <div className="page">{children}</div>;
   }
 

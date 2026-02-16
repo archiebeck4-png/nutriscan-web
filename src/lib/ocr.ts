@@ -45,6 +45,22 @@ export async function recognizeImage(
     .filter((line) => line.length > 0);
 }
 
+/**
+ * Recognize text from an already-preprocessed image blob.
+ * Skips the internal preprocessing step — use when you've already
+ * called preprocessForOcr() yourself (e.g. in the debug page).
+ */
+export async function recognizePreprocessed(
+  preprocessedBlob: Blob,
+): Promise<string[]> {
+  const worker = await getWorker();
+  const { data } = await worker.recognize(preprocessedBlob);
+  return data.text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
 export async function preloadOcr(): Promise<void> {
   await getWorker();
 }

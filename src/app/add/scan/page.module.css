@@ -311,3 +311,42 @@
   margin-top: 8px;
   text-align: center;
 }
+
+/* Button row layout */
+.buttonRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  width: 100%;
+}
+
+/* Upload photo button */
+.uploadButton {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.uploadButton:active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.uploadButton:disabled {
+  opacity: 0.4;
+}
+
+/* Spacer to balance the row layout */
+.uploadButtonSpacer {
+  width: 48px;
+  height: 48px;
+}

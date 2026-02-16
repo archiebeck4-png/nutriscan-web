@@ -10,9 +10,13 @@
  *   6. Export as PNG
  */
 
+export type GrayscaleMode = 'luma' | 'red' | 'green' | 'blue' | 'invert';
+
 export interface PreprocessOptions {
   /** When true: downscale to 1200px max dimension (faster for continuous scanning) */
   fast?: boolean;
+  /** Which channel to use for grayscale conversion (default: 'luma') */
+  grayscaleMode?: GrayscaleMode;
 }
 
 const FAST_MAX_DIMENSION = 1200;
@@ -55,11 +59,19 @@ export async function preprocessForOcr(
   const imageData = ctx.getImageData(0, 0, w, h);
   const data = imageData.data;
 
-  // Step 1: Convert to grayscale
+  // Step 1: Convert to grayscale (channel-selectable)
+  const mode = options.grayscaleMode ?? 'luma';
   const gray = new Float32Array(w * h);
   for (let i = 0; i < gray.length; i++) {
     const idx = i * 4;
-    gray[i] = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+    const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+    switch (mode) {
+      case 'red':    gray[i] = r; break;
+      case 'green':  gray[i] = g; break;
+      case 'blue':   gray[i] = b; break;
+      case 'invert': gray[i] = 255 - (0.299 * r + 0.587 * g + 0.114 * b); break;
+      default:       gray[i] = 0.299 * r + 0.587 * g + 0.114 * b; break;
+    }
   }
 
   // Step 2: Contrast stretch (histogram stretch)
