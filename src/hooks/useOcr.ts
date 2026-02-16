@@ -23,14 +23,17 @@ export function useOcr() {
     };
   }, []);
 
-  const recognize = useCallback(async (image: Blob): Promise<string[]> => {
-    setIsProcessing(true);
-    try {
-      return await recognizeImage(image);
-    } finally {
-      setIsProcessing(false);
-    }
-  }, []);
+  const recognize = useCallback(
+    async (image: Blob, fast: boolean = false): Promise<string[]> => {
+      setIsProcessing(true);
+      try {
+        return await recognizeImage(image, fast);
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    [],
+  );
 
   return { recognize, isProcessing, isReady, progress };
 }

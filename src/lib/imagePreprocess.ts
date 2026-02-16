@@ -28,15 +28,28 @@ const WINDOW_MAX = 51;
 
 // ── Main entry point ───────────────────────────────────────────────
 
+export interface PreprocessOptions {
+  /** When true: use 800px max dimension and skip morphological open (faster for continuous scanning) */
+  fast?: boolean;
+}
+
+const FAST_MAX_DIMENSION = 800;
+
 /**
  * Preprocess a camera capture for better OCR accuracy.
  * @param blob Raw camera capture (JPEG / PNG)
+ * @param options Optional settings (fast mode for continuous scanning)
  * @returns Preprocessed PNG blob — clean black text on white background
  */
-export async function preprocessForOcr(blob: Blob): Promise<Blob> {
+export async function preprocessForOcr(
+  blob: Blob,
+  options: PreprocessOptions = {},
+): Promise<Blob> {
+  const maxDim = options.fast ? FAST_MAX_DIMENSION : MAX_DIMENSION;
+
   // 1. Decode + optional downscale
   const imageBitmap = await createImageBitmap(blob);
-  const { canvas, ctx, w, h } = createScaledCanvas(imageBitmap);
+  const { canvas, ctx, w, h } = createScaledCanvas(imageBitmap, maxDim);
   imageBitmap.close();
 
   const imageData = ctx.getImageData(0, 0, w, h);
@@ -56,8 +69,8 @@ export async function preprocessForOcr(blob: Blob): Promise<Blob> {
   const windowSize = computeWindowSize(w);
   const binarized = sauvolaThreshold(stretched, w, h, windowSize);
 
-  // 6. Morphological open to remove noise specks
-  const cleaned = morphOpen(binarized, w, h);
+  // 6. Morphological open to remove noise specks (skip in fast mode)
+  const cleaned = options.fast ? binarized : morphOpen(binarized, w, h);
 
   // 7. Write back + export PNG
   writeToImageData(cleaned, rgba);
@@ -67,14 +80,14 @@ export async function preprocessForOcr(blob: Blob): Promise<Blob> {
 
 // ── Step 1: Decode + downscale ─────────────────────────────────────
 
-function createScaledCanvas(bitmap: ImageBitmap) {
+function createScaledCanvas(bitmap: ImageBitmap, maxDimension: number) {
   const canvas = document.createElement('canvas');
   let w = bitmap.width;
   let h = bitmap.height;
 
   const maxDim = Math.max(w, h);
-  if (maxDim > MAX_DIMENSION) {
-    const scale = MAX_DIMENSION / maxDim;
+  if (maxDim > maxDimension) {
+    const scale = maxDimension / maxDim;
     w = Math.round(w * scale);
     h = Math.round(h * scale);
   }

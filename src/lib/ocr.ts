@@ -29,10 +29,13 @@ async function getWorker(): Promise<Worker> {
   return workerInstance;
 }
 
-export async function recognizeImage(image: Blob): Promise<string[]> {
+export async function recognizeImage(
+  image: Blob,
+  fast: boolean = false,
+): Promise<string[]> {
   // Preprocess image for better OCR accuracy
   if (progressCallback) progressCallback('Enhancing image...', 0);
-  const processed = await preprocessForOcr(image);
+  const processed = await preprocessForOcr(image, { fast });
 
   const worker = await getWorker();
   const { data } = await worker.recognize(processed);

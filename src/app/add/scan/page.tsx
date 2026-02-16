@@ -1,12 +1,33 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCamera } from '../../../hooks/useCamera';
 import { useOcr } from '../../../hooks/useOcr';
+import { useContinuousScan } from '../../../hooks/useContinuousScan';
 import { parseNutritionLabel } from '../../../parsing/nutritionLabelParser';
 import { useScanData } from '../../../context/ScanContext';
+import { ScannedNutrition } from '../../../models/types';
 import styles from './page.module.css';
+
+function LiveValue({
+  label,
+  value,
+  unit,
+}: {
+  label: string;
+  value: string;
+  unit: string;
+}) {
+  return (
+    <div className={styles.liveValue}>
+      <span className={styles.liveValueLabel}>{label}</span>
+      <span className={styles.liveValueNumber}>
+        {value ? `${value}${unit}` : '--'}
+      </span>
+    </div>
+  );
+}
 
 export default function ScanPage() {
   const router = useRouter();
@@ -15,13 +36,36 @@ export default function ScanPage() {
   const { recognize, isProcessing, isReady: ocrReady, progress } = useOcr();
   const { setScanData } = useScanData();
   const [error, setError] = useState<string | null>(null);
+  const [navigating, setNavigating] = useState(false);
 
   useEffect(() => {
     initCamera();
   }, [initCamera]);
 
+  // Callback when continuous scan finds a valid result
+  const handleValidResult = useCallback(
+    (nutrition: ScannedNutrition, imageBlob: Blob) => {
+      setNavigating(true);
+      setScanData({ nutrition, imageBlob });
+      router.push('/add/review');
+    },
+    [setScanData, router],
+  );
+
+  // Continuous scan hook
+  const continuousScanEnabled =
+    isReady && ocrReady && !isProcessing && !navigating;
+  const { isScanning, currentResult, currentScore, stop: stopContinuousScan } =
+    useContinuousScan({
+      videoRef,
+      onValidResult: handleValidResult,
+      enabled: continuousScanEnabled,
+    });
+
+  // Manual capture fallback — stops continuous scan, does full-quality single capture
   const handleCapture = async () => {
-    if (isProcessing) return;
+    if (isProcessing || navigating) return;
+    stopContinuousScan();
     setError(null);
 
     try {
@@ -30,7 +74,7 @@ export default function ScanPage() {
 
       if (ocrLines.length === 0) {
         setError(
-          'No text detected. Try holding the camera closer to the nutrition label.'
+          'No text detected. Try holding the camera closer to the nutrition label.',
         );
         return;
       }
@@ -93,12 +137,78 @@ export default function ScanPage() {
 
       {/* Guide overlay */}
       <div className={styles.overlay}>
-        <div className={styles.guideBox}>
+        <div
+          className={`${styles.guideBox} ${isScanning ? styles.guideBoxScanning : ''}`}
+        >
           <span className={styles.guideText}>
-            Position the nutrition label within the frame
+            {isScanning
+              ? 'Scanning... hold steady'
+              : 'Position the nutrition label within the frame'}
           </span>
         </div>
       </div>
+
+      {/* Live detected values panel */}
+      {isScanning &&
+        currentResult &&
+        currentScore &&
+        currentScore.fieldsFound.length > 0 && (
+          <div className={styles.liveResultsPanel}>
+            <div className={styles.liveResultsHeader}>
+              <span className={styles.scanningDot} />
+              Detected ({currentScore.fieldsFound.length}/6)
+            </div>
+            <div className={styles.liveResultsGrid}>
+              <LiveValue
+                label="Energy"
+                value={
+                  currentResult.energyPerServing || currentResult.energyPer100g
+                }
+                unit="kJ"
+              />
+              <LiveValue
+                label="Protein"
+                value={
+                  currentResult.proteinPerServing ||
+                  currentResult.proteinPer100g
+                }
+                unit="g"
+              />
+              <LiveValue
+                label="Fat"
+                value={
+                  currentResult.fatPerServing || currentResult.fatPer100g
+                }
+                unit="g"
+              />
+              <LiveValue
+                label="Carbs"
+                value={
+                  currentResult.carbsPerServing || currentResult.carbsPer100g
+                }
+                unit="g"
+              />
+            </div>
+            {/* Score bar */}
+            <div className={styles.scoreBarContainer}>
+              <div
+                className={styles.scoreBar}
+                style={{
+                  width: `${Math.round(currentScore.score * 100)}%`,
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+      {/* Navigating overlay */}
+      {navigating && (
+        <div className={styles.processingOverlay}>
+          <div className={styles.processingBadge}>
+            Label detected! Opening review...
+          </div>
+        </div>
+      )}
 
       {/* OCR loading progress */}
       {!ocrReady && progress && (
@@ -109,7 +219,7 @@ export default function ScanPage() {
         </div>
       )}
 
-      {/* Processing overlay */}
+      {/* Manual processing overlay */}
       {isProcessing && (
         <div className={styles.processingOverlay}>
           <div className={styles.processingBadge}>
@@ -138,14 +248,19 @@ export default function ScanPage() {
         <button
           className={styles.captureButton}
           onClick={handleCapture}
-          disabled={isProcessing || !isReady}
+          disabled={isProcessing || !isReady || navigating}
         >
           <div
             className={`${styles.captureButtonInner} ${
-              isProcessing || !isReady ? styles.disabled : ''
+              isProcessing || !isReady || navigating ? styles.disabled : ''
             }`}
           />
         </button>
+        <span className={styles.captureHint}>
+          {isScanning
+            ? 'Auto-scanning... tap to capture manually'
+            : 'Tap to scan'}
+        </span>
       </div>
     </div>
   );

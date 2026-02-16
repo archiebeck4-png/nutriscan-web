@@ -98,6 +98,22 @@
   align-items: flex-end;
   justify-content: center;
   padding-bottom: 16px;
+  transition: border-color 0.3s ease;
+}
+
+.guideBoxScanning {
+  border-color: rgba(46, 213, 115, 0.7);
+  animation: guidePulse 2s ease-in-out infinite;
+}
+
+@keyframes guidePulse {
+  0%,
+  100% {
+    border-color: rgba(46, 213, 115, 0.4);
+  }
+  50% {
+    border-color: rgba(46, 213, 115, 0.9);
+  }
 }
 
 .guideText {
@@ -107,6 +123,92 @@
   background: rgba(0, 0, 0, 0.4);
   padding: 4px 12px;
   border-radius: 8px;
+}
+
+/* Live results panel */
+.liveResultsPanel {
+  position: absolute;
+  top: max(56px, calc(env(safe-area-inset-top, 0px) + 48px));
+  left: 12px;
+  right: 12px;
+  z-index: 12;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  padding: 12px 16px;
+}
+
+.liveResultsHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.scanningDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2ed573;
+  animation: dotPulse 1s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.liveResultsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+}
+
+.liveValue {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.liveValueLabel {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.liveValueNumber {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Score bar */
+.scoreBarContainer {
+  margin-top: 10px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.scoreBar {
+  height: 100%;
+  background: linear-gradient(90deg, #6c5ce7, #2ed573);
+  border-radius: 2px;
+  transition: width 0.3s ease-out;
 }
 
 /* Processing / progress overlays */
@@ -169,7 +271,8 @@
   left: 0;
   right: 0;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   z-index: 5;
 }
 
@@ -200,4 +303,11 @@
 
 .captureButton:active .captureButtonInner:not(.disabled) {
   background: rgba(255, 255, 255, 0.8);
+}
+
+.captureHint {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  margin-top: 8px;
+  text-align: center;
 }
