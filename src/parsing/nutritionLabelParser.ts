@@ -79,9 +79,8 @@ function normalize(line: string): string {
   // Using a non-lookbehind approach for broader compatibility
   s = s.replace(/(\d)l(\d)/g, '$1' + '1' + '$2');
 
-  // Fix OCR misreads: 'O' or 'o' between two digits → '0'
-  // Only fires between digits (e.g. "1o5" → "105"), not digit+word (e.g. "2oz")
-  s = s.replace(/(\d)[Oo](\d)/g, '$10$2');
+  // Fix OCR misreads: 'O' or 'o' after a digit → '0'
+  s = s.replace(/(\d)[Oo]/g, '$1' + '0');
 
   // Collapse multiple spaces into one
   s = s.replace(/\s+/g, ' ');

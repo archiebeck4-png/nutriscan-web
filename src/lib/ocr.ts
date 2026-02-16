@@ -25,13 +25,6 @@ async function getWorker(): Promise<Worker> {
   });
 
   workerInstance = await workerInitPromise;
-
-  // Configure Tesseract for nutrition label table layout
-  await workerInstance.setParameters({
-    tessedit_pageseg_mode: '6' as any, // PSM.SINGLE_BLOCK — single uniform text block
-    preserve_interword_spaces: '1', // keep column spacing in two-column NIP tables
-  });
-
   workerInitPromise = null;
   return workerInstance;
 }
