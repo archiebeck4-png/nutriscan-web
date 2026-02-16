@@ -51,11 +51,11 @@ export function useContinuousScan({
       try {
         if (!videoRef.current) break;
 
-        // 1. Capture frame at lower quality for speed
-        const imageBlob = await captureFrame(videoRef.current, 0.8);
+        // 1. Capture frame (higher quality for better OCR accuracy)
+        const imageBlob = await captureFrame(videoRef.current, 0.9);
         if (abortRef.current) break;
 
-        // 2. OCR with fast preprocessing (800px, no morphOpen)
+        // 2. OCR with fast preprocessing (1200px grayscale + CLAHE)
         const ocrLines = await recognizeImage(imageBlob, true);
         if (abortRef.current) break;
 

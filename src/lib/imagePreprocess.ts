@@ -1,18 +1,17 @@
 /**
- * Multi-channel adaptive image preprocessing pipeline for OCR.
+ * Grayscale image preprocessing pipeline for LSTM OCR.
  *
  * Pipeline:
  *   1. Decode + optional downscale (max 1600px)
  *   2. Extract 7 grayscale candidates (Luma, R, G, B, |R-G|, |R-B|, |G-B|)
- *   3. Score each channel's bimodality → pick the best one
- *   4. Percentile-based contrast stretch (0.5th – 99.5th)
- *   5. Sauvola local adaptive thresholding (K adapted to channel quality)
- *   6. Export as lossless PNG
+ *   3. Score each channel's contrast → pick the best one
+ *   4. CLAHE (Contrast Limited Adaptive Histogram Equalization)
+ *   5. Export as grayscale PNG
  *
- * This handles both traditional high-contrast labels AND colored labels
- * (e.g. dark text on green/blue/yellow backgrounds) by automatically
- * selecting the colour channel with the best text-vs-background separation
- * and adapting the binarization threshold per-region.
+ * IMPORTANT: This pipeline outputs GRAYSCALE, not binary black/white.
+ * Tesseract's LSTM engine (OEM 1) is trained on grayscale images and
+ * performs significantly better with gradient/anti-aliasing information
+ * preserved. Binarization destroys edge detail the neural network needs.
  *
  * Color-difference channels (|R-G|, |R-B|, |G-B|) detect hue-based contrast
  * that single channels miss on monochromatic colored labels.
@@ -20,30 +19,30 @@
 
 // ── Tunable constants ──────────────────────────────────────────────
 const MAX_DIMENSION = 1600;
+const FAST_MAX_DIMENSION = 1200;
+
+// CLAHE parameters
+const CLAHE_TILE_SIZE = 8; // grid tiles (8x8 grid)
+const CLAHE_CLIP_LIMIT = 2.5; // contrast amplification limit
+
+// Percentile stretch (fallback / pre-CLAHE normalization)
 const PERCENTILE_LOW = 0.005;
 const PERCENTILE_HIGH = 0.995;
-const SAUVOLA_K = 0.2;
-const SAUVOLA_K_LOW_CONTRAST = 0.35;
-const SAUVOLA_LOW_CONTRAST_THRESHOLD = 0.1;
-const SAUVOLA_R = 128;
-const WINDOW_DIVISOR = 60;
-const WINDOW_MIN = 15;
-const WINDOW_MAX = 51;
 
 // ── Main entry point ───────────────────────────────────────────────
 
 export interface PreprocessOptions {
-  /** When true: use 800px max dimension (faster for continuous scanning) */
+  /** When true: use 1200px max dimension (faster for continuous scanning) */
   fast?: boolean;
 }
 
-const FAST_MAX_DIMENSION = 800;
-
 /**
  * Preprocess a camera capture for better OCR accuracy.
+ * Outputs an enhanced grayscale image (NOT binary/binarized).
+ *
  * @param blob Raw camera capture (JPEG / PNG)
  * @param options Optional settings (fast mode for continuous scanning)
- * @returns Preprocessed PNG blob — clean black text on white background
+ * @returns Preprocessed grayscale PNG blob
  */
 export async function preprocessForOcr(
   blob: Blob,
@@ -63,23 +62,17 @@ export async function preprocessForOcr(
   // 2. Extract 7 grayscale channel candidates (incl. color-difference)
   const channels = extractChannels(rgba, numPixels);
 
-  // 3. Pick the channel with best text/background separation
-  const { channel: bestGray, score: bestScore } = selectBestChannel(channels);
+  // 3. Pick the channel with best text/background contrast
+  const bestGray = selectBestChannel(channels);
 
-  // 4. Percentile-based contrast stretch
+  // 4. Percentile stretch to normalize intensity range
   const stretched = percentileStretch(bestGray);
 
-  // 5. Sauvola local adaptive thresholding
-  //    Use more aggressive K for low-contrast (colored) labels
-  const windowSize = computeWindowSize(w);
-  const k =
-    bestScore < SAUVOLA_LOW_CONTRAST_THRESHOLD
-      ? SAUVOLA_K_LOW_CONTRAST
-      : SAUVOLA_K;
-  const binarized = sauvolaThreshold(stretched, w, h, windowSize, k);
+  // 5. CLAHE for local contrast enhancement (preserves grayscale detail)
+  const enhanced = clahe(stretched, w, h);
 
-  // 6. Write back + export PNG
-  writeToImageData(binarized, rgba);
+  // 6. Write grayscale back + export PNG
+  writeGrayscale(enhanced, rgba);
   ctx.putImageData(imageData, 0, 0);
   return canvasToBlob(canvas);
 }
@@ -148,11 +141,9 @@ function extractChannels(
   return { luma, red, green, blue, diffRG, diffRB, diffGB };
 }
 
-// ── Step 3: Channel selection by bimodality score ──────────────────
+// ── Step 3: Channel selection by contrast score ────────────────────
 
-function selectBestChannel(
-  channels: ChannelSet,
-): { channel: Uint8Array; score: number } {
+function selectBestChannel(channels: ChannelSet): Uint8Array {
   const candidates: Uint8Array[] = [
     channels.luma,
     channels.red,
@@ -167,22 +158,22 @@ function selectBestChannel(
   let bestScore = -1;
 
   for (let c = 0; c < candidates.length; c++) {
-    const score = bimodalityScore(candidates[c]);
+    const score = contrastScore(candidates[c]);
     if (score > bestScore) {
       bestScore = score;
       best = candidates[c];
     }
   }
 
-  return { channel: best, score: bestScore };
+  return best;
 }
 
 /**
- * Measure how cleanly a grayscale histogram separates into two classes.
- * Uses Otsu's inter-class variance normalised by total variance.
- * Higher score → cleaner bimodal split → better for binarization.
+ * Measure how much contrast a grayscale channel has between
+ * text and background. Uses Otsu's inter-class variance normalised
+ * by total variance. Higher = cleaner separation.
  */
-function bimodalityScore(gray: Uint8Array): number {
+function contrastScore(gray: Uint8Array): number {
   const histogram = new Uint32Array(256);
   for (let i = 0; i < gray.length; i++) {
     histogram[gray[i]]++;
@@ -227,7 +218,7 @@ function bimodalityScore(gray: Uint8Array): number {
 
 // ── Step 4: Percentile-based contrast stretch ──────────────────────
 
-function percentileStretch(gray: Uint8Array): Float32Array {
+function percentileStretch(gray: Uint8Array): Uint8Array {
   const histogram = new Uint32Array(256);
   for (let i = 0; i < gray.length; i++) {
     histogram[gray[i]]++;
@@ -255,101 +246,115 @@ function percentileStretch(gray: Uint8Array): Float32Array {
   }
 
   const range = highVal - lowVal || 1;
-  const stretched = new Float32Array(gray.length);
+  const output = new Uint8Array(gray.length);
   for (let i = 0; i < gray.length; i++) {
     const val = ((gray[i] - lowVal) / range) * 255;
-    stretched[i] = Math.max(0, Math.min(255, val));
+    output[i] = Math.max(0, Math.min(255, Math.round(val)));
   }
-  return stretched;
+  return output;
 }
 
-// ── Step 5: Sauvola local adaptive thresholding ────────────────────
-
-function computeWindowSize(imgWidth: number): number {
-  let ws = Math.round(imgWidth / WINDOW_DIVISOR);
-  ws = Math.max(WINDOW_MIN, Math.min(WINDOW_MAX, ws));
-  // Ensure odd
-  if (ws % 2 === 0) ws += 1;
-  return ws;
-}
+// ── Step 5: CLAHE (Contrast Limited Adaptive Histogram Equalization)
 
 /**
- * Sauvola binarization using integral images for O(N) performance.
- * T(x,y) = mean * (1 + k * (stddev / R − 1))
+ * CLAHE enhances local contrast while preventing over-amplification.
+ * Unlike global histogram equalization, it works on small tiles and
+ * interpolates between them for smooth results.
+ *
+ * This preserves grayscale gradients that Tesseract's LSTM needs,
+ * while making text more legible against varied backgrounds.
  */
-function sauvolaThreshold(
-  gray: Float32Array,
-  w: number,
-  h: number,
-  windowSize: number,
-  k: number = SAUVOLA_K,
-): Uint8Array {
-  const n = w * h;
-  const halfW = (windowSize - 1) >> 1;
+function clahe(gray: Uint8Array, w: number, h: number): Uint8Array {
+  const tilesX = CLAHE_TILE_SIZE;
+  const tilesY = CLAHE_TILE_SIZE;
+  const tileW = Math.ceil(w / tilesX);
+  const tileH = Math.ceil(h / tilesY);
+  const clipLimit = Math.max(
+    1,
+    Math.round(CLAHE_CLIP_LIMIT * ((tileW * tileH) / 256)),
+  );
 
-  // Build integral images for sum and sum-of-squares
-  const integralSum = new Float64Array(n);
-  const integralSq = new Float64Array(n);
+  // 1. Build lookup tables for each tile
+  const luts: Uint8Array[][] = [];
 
-  // First pixel
-  integralSum[0] = gray[0];
-  integralSq[0] = gray[0] * gray[0];
+  for (let ty = 0; ty < tilesY; ty++) {
+    luts[ty] = [];
+    for (let tx = 0; tx < tilesX; tx++) {
+      const x0 = tx * tileW;
+      const y0 = ty * tileH;
+      const x1 = Math.min(x0 + tileW, w);
+      const y1 = Math.min(y0 + tileH, h);
 
-  // First row
-  for (let x = 1; x < w; x++) {
-    integralSum[x] = integralSum[x - 1] + gray[x];
-    integralSq[x] = integralSq[x - 1] + gray[x] * gray[x];
-  }
+      // Build histogram for this tile
+      const hist = new Uint32Array(256);
+      let count = 0;
+      for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
+          hist[gray[y * w + x]]++;
+          count++;
+        }
+      }
 
-  // Remaining rows
-  for (let y = 1; y < h; y++) {
-    let rowSum = 0;
-    let rowSqSum = 0;
-    for (let x = 0; x < w; x++) {
-      const idx = y * w + x;
-      rowSum += gray[idx];
-      rowSqSum += gray[idx] * gray[idx];
-      integralSum[idx] = integralSum[(y - 1) * w + x] + rowSum;
-      integralSq[idx] = integralSq[(y - 1) * w + x] + rowSqSum;
+      // Clip histogram and redistribute
+      let excess = 0;
+      for (let i = 0; i < 256; i++) {
+        if (hist[i] > clipLimit) {
+          excess += hist[i] - clipLimit;
+          hist[i] = clipLimit;
+        }
+      }
+      const avgExcess = Math.floor(excess / 256);
+      const remainder = excess - avgExcess * 256;
+      for (let i = 0; i < 256; i++) {
+        hist[i] += avgExcess;
+      }
+      // Distribute remainder evenly across bins
+      const step = Math.max(1, Math.floor(256 / (remainder + 1)));
+      for (let i = 0; i < remainder; i++) {
+        hist[(i * step) % 256]++;
+      }
+
+      // Build CDF lookup table
+      const lut = new Uint8Array(256);
+      let cdf = 0;
+      const scale = count > 0 ? 255 / count : 0;
+      for (let i = 0; i < 256; i++) {
+        cdf += hist[i];
+        lut[i] = Math.min(255, Math.round(cdf * scale));
+      }
+
+      luts[ty][tx] = lut;
     }
   }
 
-  // Compute per-pixel threshold
-  const output = new Uint8Array(n);
+  // 2. Interpolate between tile LUTs for each pixel
+  const output = new Uint8Array(gray.length);
 
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      // Window bounds (clamped to image)
-      const x1 = Math.max(0, x - halfW) - 1;
-      const y1 = Math.max(0, y - halfW) - 1;
-      const x2 = Math.min(w - 1, x + halfW);
-      const y2 = Math.min(h - 1, y + halfW);
+      const val = gray[y * w + x];
 
-      const area = (x2 - x1) * (y2 - y1);
+      // Which tile center is this pixel relative to?
+      const txf = (x + 0.5) / tileW - 0.5;
+      const tyf = (y + 0.5) / tileH - 0.5;
 
-      // Rectangle sum via integral image
-      let sum = integralSum[y2 * w + x2];
-      let sqSum = integralSq[y2 * w + x2];
-      if (x1 >= 0) {
-        sum -= integralSum[y2 * w + x1];
-        sqSum -= integralSq[y2 * w + x1];
-      }
-      if (y1 >= 0) {
-        sum -= integralSum[y1 * w + x2];
-        sqSum -= integralSq[y1 * w + x2];
-      }
-      if (x1 >= 0 && y1 >= 0) {
-        sum += integralSum[y1 * w + x1];
-        sqSum += integralSq[y1 * w + x1];
-      }
+      const tx0 = Math.max(0, Math.floor(txf));
+      const ty0 = Math.max(0, Math.floor(tyf));
+      const tx1 = Math.min(tilesX - 1, tx0 + 1);
+      const ty1 = Math.min(tilesY - 1, ty0 + 1);
 
-      const mean = sum / area;
-      const variance = sqSum / area - mean * mean;
-      const stddev = Math.sqrt(Math.max(0, variance));
+      const fx = txf - tx0;
+      const fy = tyf - ty0;
 
-      const threshold = mean * (1 + k * (stddev / SAUVOLA_R - 1));
+      // Bilinear interpolation of the 4 surrounding tile LUTs
+      const tl = luts[ty0][tx0][val];
+      const tr = luts[ty0][tx1][val];
+      const bl = luts[ty1][tx0][val];
+      const br = luts[ty1][tx1][val];
 
-      output[y * w + x] = gray[y * w + x] > threshold ? 255 : 0;
+      const top = tl + (tr - tl) * fx;
+      const bot = bl + (br - bl) * fx;
+      output[y * w + x] = Math.round(top + (bot - top) * fy);
     }
   }
 
@@ -358,12 +363,12 @@ function sauvolaThreshold(
 
 // ── Step 6: Write back + export ────────────────────────────────────
 
-function writeToImageData(binary: Uint8Array, rgba: Uint8ClampedArray) {
-  for (let i = 0; i < binary.length; i++) {
+function writeGrayscale(gray: Uint8Array, rgba: Uint8ClampedArray) {
+  for (let i = 0; i < gray.length; i++) {
     const idx = i * 4;
-    rgba[idx] = binary[i];
-    rgba[idx + 1] = binary[i];
-    rgba[idx + 2] = binary[i];
+    rgba[idx] = gray[i];
+    rgba[idx + 1] = gray[i];
+    rgba[idx + 2] = gray[i];
     rgba[idx + 3] = 255;
   }
 }
