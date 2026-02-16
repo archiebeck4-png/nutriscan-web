@@ -17,12 +17,6 @@ export function useCamera() {
       streamRef.current = stream;
       setPermissionState('granted');
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-        setIsReady(true);
-      }
-
       // Handle iOS stream ending when app goes to background
       const track = stream.getVideoTracks()[0];
       if (track) {
@@ -41,6 +35,17 @@ export function useCamera() {
       setIsReady(false);
     }
   }, []);
+
+  // Attach stream to video element AFTER it renders (fixes race condition
+  // where stream is obtained before <video> is in the DOM)
+  useEffect(() => {
+    if (permissionState === 'granted' && streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play()
+        .then(() => setIsReady(true))
+        .catch(() => setIsReady(false));
+    }
+  }, [permissionState]);
 
   const cleanup = useCallback(() => {
     if (streamRef.current) {
