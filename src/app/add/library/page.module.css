@@ -38,11 +38,13 @@
   width: 100%;
   font-size: 16px;
   padding: 10px 14px;
-  border: none;
+  border: 1px solid var(--card-border);
   border-radius: 10px;
   background: var(--card-bg);
   color: var(--text-primary);
   outline: none;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .searchInput::placeholder {
@@ -106,7 +108,7 @@
   padding: 6px 4px;
   border: none;
   border-radius: 6px;
-  background: var(--background);
+  background: var(--input-bg);
   color: var(--text-primary);
   outline: none;
 }
@@ -129,4 +131,29 @@
 
 .logBtn:active {
   opacity: 0.8;
+}
+
+.modeToggle {
+  display: flex;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 1px;
+}
+
+.modeBtn {
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.modeBtnActive {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 1px 4px var(--accent-glow);
 }

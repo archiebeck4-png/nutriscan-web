@@ -1,4 +1,5 @@
 import { createWorker, Worker } from 'tesseract.js';
+import { preprocessForOcr } from './imagePreprocess';
 
 let workerInstance: Worker | null = null;
 let workerInitPromise: Promise<Worker> | null = null;
@@ -29,8 +30,12 @@ async function getWorker(): Promise<Worker> {
 }
 
 export async function recognizeImage(image: Blob): Promise<string[]> {
+  // Preprocess image for better OCR accuracy
+  if (progressCallback) progressCallback('Enhancing image...', 0);
+  const processed = await preprocessForOcr(image);
+
   const worker = await getWorker();
-  const { data } = await worker.recognize(image);
+  const { data } = await worker.recognize(processed);
   return data.text
     .split('\n')
     .map((line) => line.trim())

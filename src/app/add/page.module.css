@@ -21,7 +21,9 @@
   align-items: center;
   padding: 16px;
   background: var(--card-bg);
-  border: none;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
   border-radius: 12px;
   cursor: pointer;
   text-align: left;
@@ -30,7 +32,7 @@
 }
 
 .card:active {
-  background: #f0f0f5;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .cardIcon {

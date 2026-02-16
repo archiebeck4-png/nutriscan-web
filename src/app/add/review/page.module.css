@@ -1,6 +1,6 @@
 .container {
   min-height: 100vh;
-  background: #f2f2f7;
+  background: var(--background);
 }
 
 .centered {
@@ -11,7 +11,7 @@
   min-height: 100vh;
   gap: 16px;
   padding: 40px;
-  color: #8e8e93;
+  color: var(--text-secondary);
 }
 
 .header {
@@ -19,8 +19,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  background: #f2f2f7;
-  border-bottom: 0.5px solid #c6c6c8;
+  background: var(--background);
+  border-bottom: 0.5px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -34,7 +34,7 @@
 .cancelButton {
   background: none;
   border: none;
-  color: #007aff;
+  color: var(--accent);
   font-size: 17px;
   cursor: pointer;
   padding: 4px;
@@ -43,7 +43,7 @@
 .saveButton {
   background: none;
   border: none;
-  color: #007aff;
+  color: var(--accent);
   font-size: 17px;
   font-weight: 700;
   cursor: pointer;
@@ -51,11 +51,11 @@
 }
 
 .saveButton:disabled {
-  color: #c7c7cc;
+  color: var(--text-tertiary);
 }
 
 .actionButton {
-  background: #007aff;
+  background: var(--accent);
   color: #fff;
   font-size: 17px;
   font-weight: 600;
@@ -74,18 +74,18 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 0.5px solid #c6c6c8;
+  border-bottom: 0.5px solid var(--border);
 }
 
 .fieldLabel {
   font-size: 16px;
-  color: #000;
+  color: var(--text-primary);
   flex-shrink: 0;
 }
 
 .textInput {
   font-size: 16px;
-  color: #000;
+  color: var(--text-primary);
   text-align: right;
   flex: 1;
   margin-left: 16px;
@@ -96,12 +96,45 @@
 }
 
 .textInput::placeholder {
-  color: #c7c7cc;
+  color: var(--text-tertiary);
+}
+
+.segmentedControl {
+  display: flex;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  padding: 2px;
+}
+
+.segmentButton {
+  flex: 1;
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.segmentActive {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+.servingRef {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 4px 16px 12px 16px;
+  font-style: italic;
 }
 
 .rawText {
   font-size: 12px;
-  color: #8e8e93;
+  color: var(--text-secondary);
   padding: 16px;
   font-family: monospace;
   line-height: 18px;

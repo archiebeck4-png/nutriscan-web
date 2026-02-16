@@ -112,7 +112,9 @@ export default function ScanPage() {
       {/* Processing overlay */}
       {isProcessing && (
         <div className={styles.processingOverlay}>
-          <div className={styles.processingBadge}>Scanning label...</div>
+          <div className={styles.processingBadge}>
+            {progress || 'Scanning label...'}
+          </div>
         </div>
       )}
 

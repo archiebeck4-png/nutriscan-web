@@ -12,7 +12,7 @@
 
 .segmentedControl {
   display: flex;
-  background: rgba(118, 118, 128, 0.12);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 9px;
   padding: 2px;
   margin-bottom: 20px;
@@ -33,7 +33,7 @@
 
 .segmentActive {
   background: var(--card-bg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .loading {

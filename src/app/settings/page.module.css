@@ -50,7 +50,7 @@
   text-align: right;
   font-size: 16px;
   color: var(--text-primary);
-  background: var(--background);
+  background: var(--input-bg);
   border: none;
   border-radius: 6px;
   padding: 6px 10px;
@@ -60,7 +60,7 @@
 .select {
   font-size: 15px;
   color: var(--text-primary);
-  background: var(--background);
+  background: var(--input-bg);
   border: none;
   border-radius: 6px;
   padding: 6px 10px;
@@ -70,7 +70,7 @@
 
 .miniSegmented {
   display: flex;
-  background: rgba(118, 118, 128, 0.12);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 7px;
   padding: 2px;
 }
@@ -88,7 +88,7 @@
 
 .miniSegActive {
   background: var(--card-bg);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .editActions {
@@ -136,5 +136,5 @@
 }
 
 .dangerRow:active {
-  background: rgba(255, 59, 48, 0.05);
+  background: rgba(255, 71, 87, 0.1);
 }

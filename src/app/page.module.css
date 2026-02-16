@@ -84,7 +84,7 @@
   border: none;
   border-radius: 25px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+  box-shadow: 0 4px 20px var(--accent-glow), 0 0 40px var(--accent-glow);
   z-index: 10;
   transition: opacity 0.15s, transform 0.15s;
 }

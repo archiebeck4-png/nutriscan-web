@@ -2,8 +2,8 @@ export async function startCamera(): Promise<MediaStream> {
   const stream = await navigator.mediaDevices.getUserMedia({
     video: {
       facingMode: { ideal: 'environment' },
-      width: { ideal: 1920 },
-      height: { ideal: 1080 },
+      width: { ideal: 2560 },
+      height: { ideal: 1920 },
     },
     audio: false,
   });
@@ -16,7 +16,7 @@ export function stopCamera(stream: MediaStream): void {
 
 export function captureFrame(
   video: HTMLVideoElement,
-  quality: number = 0.85
+  quality: number = 0.95
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');

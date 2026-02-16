@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Track your macros and scan nutrition labels',
     start_url: '/',
     display: 'standalone',
-    background_color: '#f2f2f7',
-    theme_color: '#007AFF',
+    background_color: '#0a0a0f',
+    theme_color: '#6c5ce7',
     orientation: 'portrait',
     icons: [
       {

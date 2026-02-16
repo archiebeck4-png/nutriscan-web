@@ -14,14 +14,14 @@
 .title {
   font-size: 20px;
   font-weight: 600;
-  color: #3c3c43;
+  color: var(--text-primary);
   margin-top: 16px;
   text-align: center;
 }
 
 .message {
   font-size: 15px;
-  color: #8e8e93;
+  color: var(--text-secondary);
   margin-top: 8px;
   text-align: center;
   line-height: 20px;

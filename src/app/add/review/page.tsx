@@ -30,7 +30,9 @@ export default function ReviewPage() {
       rawText: '',
     }
   );
+  const [quantityMode, setQuantityMode] = useState<'servings' | 'grams'>('servings');
   const [servingsConsumed, setServingsConsumed] = useState('1');
+  const [gramsConsumed, setGramsConsumed] = useState('');
   const [showRawText, setShowRawText] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -86,17 +88,35 @@ export default function ReviewPage() {
       await insertEntry(entry);
 
       // 2. Add to today's food log
-      const qty = parseFloat(servingsConsumed) || 1;
+      let energyKj: number, proteinG: number, fatG: number, carbsG: number, fiberG: number;
+
+      if (quantityMode === 'grams') {
+        const grams = parseFloat(gramsConsumed) || 0;
+        const factor = grams / 100;
+        energyKj = (parseNum(nutrition.energyPer100g) ?? 0) * factor;
+        proteinG = (parseNum(nutrition.proteinPer100g) ?? 0) * factor;
+        fatG = (parseNum(nutrition.fatPer100g) ?? 0) * factor;
+        carbsG = (parseNum(nutrition.carbsPer100g) ?? 0) * factor;
+        fiberG = (parseNum(nutrition.fiberPer100g) ?? 0) * factor;
+      } else {
+        const qty = parseFloat(servingsConsumed) || 1;
+        energyKj = (parseNum(nutrition.energyPerServing) ?? 0) * qty;
+        proteinG = (parseNum(nutrition.proteinPerServing) ?? 0) * qty;
+        fatG = (parseNum(nutrition.fatPerServing) ?? 0) * qty;
+        carbsG = (parseNum(nutrition.carbsPerServing) ?? 0) * qty;
+        fiberG = (parseNum(nutrition.fiberPerServing) ?? 0) * qty;
+      }
+
       const logEntry: FoodLogEntry = {
         id: crypto.randomUUID(),
         date: todayDateString(),
         createdAt: new Date().toISOString(),
         foodName,
-        energyKj: (parseNum(nutrition.energyPerServing) ?? 0) * qty,
-        proteinG: (parseNum(nutrition.proteinPerServing) ?? 0) * qty,
-        fatG: (parseNum(nutrition.fatPerServing) ?? 0) * qty,
-        carbsG: (parseNum(nutrition.carbsPerServing) ?? 0) * qty,
-        fiberG: (parseNum(nutrition.fiberPerServing) ?? 0) * qty,
+        energyKj,
+        proteinG,
+        fatG,
+        carbsG,
+        fiberG,
         savedFoodId: entryId,
         source: 'scan',
       };
@@ -167,16 +187,54 @@ export default function ReviewPage() {
               inputMode="decimal"
             />
           </div>
+          {/* Quantity mode toggle */}
           <div className={styles.textFieldRow}>
-            <label className={styles.fieldLabel}>Servings eaten</label>
-            <input
-              className={styles.textInput}
-              value={servingsConsumed}
-              onChange={(e) => setServingsConsumed(e.target.value)}
-              placeholder="1"
-              inputMode="decimal"
-            />
+            <label className={styles.fieldLabel}>Log by</label>
+            <div className={styles.segmentedControl}>
+              <button
+                className={`${styles.segmentButton} ${quantityMode === 'servings' ? styles.segmentActive : ''}`}
+                onClick={() => setQuantityMode('servings')}
+                type="button"
+              >
+                Servings
+              </button>
+              <button
+                className={`${styles.segmentButton} ${quantityMode === 'grams' ? styles.segmentActive : ''}`}
+                onClick={() => setQuantityMode('grams')}
+                type="button"
+              >
+                Grams
+              </button>
+            </div>
           </div>
+          {quantityMode === 'servings' ? (
+            <div className={styles.textFieldRow}>
+              <label className={styles.fieldLabel}>Servings eaten</label>
+              <input
+                className={styles.textInput}
+                value={servingsConsumed}
+                onChange={(e) => setServingsConsumed(e.target.value)}
+                placeholder="1"
+                inputMode="decimal"
+              />
+            </div>
+          ) : (
+            <div className={styles.textFieldRow}>
+              <label className={styles.fieldLabel}>Grams eaten</label>
+              <input
+                className={styles.textInput}
+                value={gramsConsumed}
+                onChange={(e) => setGramsConsumed(e.target.value)}
+                placeholder="e.g. 150"
+                inputMode="decimal"
+              />
+            </div>
+          )}
+          {quantityMode === 'grams' && nutrition.servingSize && (
+            <div className={styles.servingRef}>
+              1 serving = {nutrition.servingSize}
+            </div>
+          )}
         </div>
 
         {/* Per Serving */}
@@ -204,7 +262,7 @@ export default function ReviewPage() {
           <>
             <button
               className="sectionHeader"
-              style={{ cursor: 'pointer', background: 'none', border: 'none', width: '100%', textAlign: 'left' }}
+              style={{ cursor: 'pointer', background: 'none', border: 'none', width: '100%', textAlign: 'left', color: 'inherit' }}
               onClick={() => setShowRawText((prev) => !prev)}
             >
               RAW OCR TEXT {showRawText ? '▼' : '▶'}

@@ -34,7 +34,7 @@ export default function EnergyRing({ current, target }: EnergyRingProps) {
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="rgba(0,0,0,0.06)"
+          stroke="rgba(255,255,255,0.08)"
           strokeWidth={strokeWidth}
         />
         {/* Progress arc */}

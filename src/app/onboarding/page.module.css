@@ -76,12 +76,12 @@
 }
 
 .card:active {
-  background: #f0f0f5;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .cardSelected {
   border-color: var(--accent);
-  background: rgba(0, 122, 255, 0.05);
+  background: var(--accent-glow);
 }
 
 .cardIcon {
@@ -105,7 +105,7 @@
 /* Gender segmented control */
 .segmentedControl {
   display: flex;
-  background: rgba(118, 118, 128, 0.12);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 9px;
   padding: 2px;
   margin-bottom: 20px;
@@ -126,12 +126,15 @@
 
 .segmentActive {
   background: var(--card-bg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 /* Input rows */
 .inputGroup {
   background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -158,7 +161,7 @@
   text-align: right;
   font-size: 17px;
   color: var(--text-primary);
-  background: var(--background);
+  background: var(--input-bg);
   border: none;
   border-radius: 6px;
   padding: 6px 10px;
@@ -181,6 +184,9 @@
   display: flex;
   flex-direction: column;
   background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -206,11 +212,11 @@
 }
 
 .listItem:active {
-  background: #f0f0f5;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .listItemSelected {
-  background: rgba(0, 122, 255, 0.05);
+  background: var(--accent-glow);
 }
 
 .listItemLabel {
@@ -240,6 +246,9 @@
 /* Targets review card */
 .targetsCard {
   background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
   border-radius: 12px;
   overflow: hidden;
   margin-bottom: 12px;

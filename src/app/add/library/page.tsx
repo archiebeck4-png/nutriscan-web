@@ -13,6 +13,8 @@ export default function LibraryPage() {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [servings, setServings] = useState<Record<string, string>>({});
+  const [quantityModes, setQuantityModes] = useState<Record<string, 'servings' | 'grams'>>({});
+  const [grams, setGrams] = useState<Record<string, string>>({});
 
   const allEntries = useLiveQuery(
     () => db.entries.orderBy('dateScanned').reverse().toArray()
@@ -23,17 +25,36 @@ export default function LibraryPage() {
   );
 
   const handleLog = async (entry: WebFoodEntry) => {
-    const qty = parseFloat(servings[entry.id] || '1') || 1;
+    const mode = quantityModes[entry.id] || 'servings';
+    let energyKj: number, proteinG: number, fatG: number, carbsG: number, fiberG: number;
+
+    if (mode === 'grams') {
+      const g = parseFloat(grams[entry.id] || '0') || 0;
+      const factor = g / 100;
+      energyKj = (entry.energyPer100g ?? 0) * factor;
+      proteinG = (entry.proteinPer100g ?? 0) * factor;
+      fatG = (entry.fatPer100g ?? 0) * factor;
+      carbsG = (entry.carbsPer100g ?? 0) * factor;
+      fiberG = (entry.fiberPer100g ?? 0) * factor;
+    } else {
+      const qty = parseFloat(servings[entry.id] || '1') || 1;
+      energyKj = (entry.energyPerServing ?? 0) * qty;
+      proteinG = (entry.proteinPerServing ?? 0) * qty;
+      fatG = (entry.fatPerServing ?? 0) * qty;
+      carbsG = (entry.carbsPerServing ?? 0) * qty;
+      fiberG = (entry.fiberPerServing ?? 0) * qty;
+    }
+
     const logEntry: FoodLogEntry = {
       id: crypto.randomUUID(),
       date: todayDateString(),
       createdAt: new Date().toISOString(),
       foodName: entry.foodName,
-      energyKj: (entry.energyPerServing ?? 0) * qty,
-      proteinG: (entry.proteinPerServing ?? 0) * qty,
-      fatG: (entry.fatPerServing ?? 0) * qty,
-      carbsG: (entry.carbsPerServing ?? 0) * qty,
-      fiberG: (entry.fiberPerServing ?? 0) * qty,
+      energyKj,
+      proteinG,
+      fatG,
+      carbsG,
+      fiberG,
       savedFoodId: entry.id,
       source: 'library',
     };
@@ -76,37 +97,57 @@ export default function LibraryPage() {
             }
           />
         ) : (
-          filtered.map((entry) => (
-            <div key={entry.id} className={styles.item}>
-              <div className={styles.itemInfo}>
-                <span className={styles.itemName}>{entry.foodName}</span>
-                <span className={styles.itemMeta}>
-                  {entry.energyPerServing ?? '--'} kJ/serve
-                  {entry.servingSize ? ` (${entry.servingSize})` : ''}
-                </span>
+          filtered.map((entry) => {
+            const mode = quantityModes[entry.id] || 'servings';
+            return (
+              <div key={entry.id} className={styles.item}>
+                <div className={styles.itemInfo}>
+                  <span className={styles.itemName}>{entry.foodName}</span>
+                  <span className={styles.itemMeta}>
+                    {entry.energyPerServing ?? '--'} kJ/serve
+                    {entry.servingSize ? ` (${entry.servingSize})` : ''}
+                  </span>
+                </div>
+                <div className={styles.itemActions}>
+                  <div className={styles.modeToggle}>
+                    <button
+                      className={`${styles.modeBtn} ${mode === 'servings' ? styles.modeBtnActive : ''}`}
+                      onClick={() => setQuantityModes((prev) => ({ ...prev, [entry.id]: 'servings' }))}
+                      type="button"
+                    >
+                      Srv
+                    </button>
+                    <button
+                      className={`${styles.modeBtn} ${mode === 'grams' ? styles.modeBtnActive : ''}`}
+                      onClick={() => setQuantityModes((prev) => ({ ...prev, [entry.id]: 'grams' }))}
+                      type="button"
+                    >
+                      g
+                    </button>
+                  </div>
+                  <input
+                    className={styles.qtyInput}
+                    value={mode === 'grams' ? (grams[entry.id] || '') : (servings[entry.id] || '')}
+                    onChange={(e) => {
+                      if (mode === 'grams') {
+                        setGrams((prev) => ({ ...prev, [entry.id]: e.target.value }));
+                      } else {
+                        setServings((prev) => ({ ...prev, [entry.id]: e.target.value }));
+                      }
+                    }}
+                    placeholder={mode === 'grams' ? 'g' : '1'}
+                    inputMode="decimal"
+                  />
+                  <button
+                    className={styles.logBtn}
+                    onClick={() => handleLog(entry)}
+                  >
+                    Log
+                  </button>
+                </div>
               </div>
-              <div className={styles.itemActions}>
-                <input
-                  className={styles.qtyInput}
-                  value={servings[entry.id] || ''}
-                  onChange={(e) =>
-                    setServings((prev) => ({
-                      ...prev,
-                      [entry.id]: e.target.value,
-                    }))
-                  }
-                  placeholder="1"
-                  inputMode="decimal"
-                />
-                <button
-                  className={styles.logBtn}
-                  onClick={() => handleLog(entry)}
-                >
-                  Log
-                </button>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
