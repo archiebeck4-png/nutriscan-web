@@ -3,17 +3,19 @@
  *
  * Pipeline:
  *   1. Decode + optional downscale (max 1600px)
- *   2. Extract 4 grayscale candidates (Luma, R, G, B)
+ *   2. Extract 7 grayscale candidates (Luma, R, G, B, |R-G|, |R-B|, |G-B|)
  *   3. Score each channel's bimodality → pick the best one
  *   4. Percentile-based contrast stretch (0.5th – 99.5th)
- *   5. Sauvola local adaptive thresholding
- *   6. Morphological open (remove noise specks)
- *   7. Export as lossless PNG
+ *   5. Sauvola local adaptive thresholding (K adapted to channel quality)
+ *   6. Export as lossless PNG
  *
  * This handles both traditional high-contrast labels AND colored labels
  * (e.g. dark text on green/blue/yellow backgrounds) by automatically
  * selecting the colour channel with the best text-vs-background separation
  * and adapting the binarization threshold per-region.
+ *
+ * Color-difference channels (|R-G|, |R-B|, |G-B|) detect hue-based contrast
+ * that single channels miss on monochromatic colored labels.
  */
 
 // ── Tunable constants ──────────────────────────────────────────────
@@ -21,6 +23,8 @@ const MAX_DIMENSION = 1600;
 const PERCENTILE_LOW = 0.005;
 const PERCENTILE_HIGH = 0.995;
 const SAUVOLA_K = 0.2;
+const SAUVOLA_K_LOW_CONTRAST = 0.35;
+const SAUVOLA_LOW_CONTRAST_THRESHOLD = 0.1;
 const SAUVOLA_R = 128;
 const WINDOW_DIVISOR = 60;
 const WINDOW_MIN = 15;
@@ -29,7 +33,7 @@ const WINDOW_MAX = 51;
 // ── Main entry point ───────────────────────────────────────────────
 
 export interface PreprocessOptions {
-  /** When true: use 800px max dimension and skip morphological open (faster for continuous scanning) */
+  /** When true: use 800px max dimension (faster for continuous scanning) */
   fast?: boolean;
 }
 
@@ -56,24 +60,26 @@ export async function preprocessForOcr(
   const rgba = imageData.data;
   const numPixels = w * h;
 
-  // 2. Extract 4 grayscale channel candidates
+  // 2. Extract 7 grayscale channel candidates (incl. color-difference)
   const channels = extractChannels(rgba, numPixels);
 
   // 3. Pick the channel with best text/background separation
-  const bestGray = selectBestChannel(channels);
+  const { channel: bestGray, score: bestScore } = selectBestChannel(channels);
 
   // 4. Percentile-based contrast stretch
   const stretched = percentileStretch(bestGray);
 
   // 5. Sauvola local adaptive thresholding
+  //    Use more aggressive K for low-contrast (colored) labels
   const windowSize = computeWindowSize(w);
-  const binarized = sauvolaThreshold(stretched, w, h, windowSize);
+  const k =
+    bestScore < SAUVOLA_LOW_CONTRAST_THRESHOLD
+      ? SAUVOLA_K_LOW_CONTRAST
+      : SAUVOLA_K;
+  const binarized = sauvolaThreshold(stretched, w, h, windowSize, k);
 
-  // 6. Morphological open to remove noise specks (skip in fast mode)
-  const cleaned = options.fast ? binarized : morphOpen(binarized, w, h);
-
-  // 7. Write back + export PNG
-  writeToImageData(cleaned, rgba);
+  // 6. Write back + export PNG
+  writeToImageData(binarized, rgba);
   ctx.putImageData(imageData, 0, 0);
   return canvasToBlob(canvas);
 }
@@ -108,13 +114,22 @@ interface ChannelSet {
   red: Uint8Array;
   green: Uint8Array;
   blue: Uint8Array;
+  diffRG: Uint8Array;
+  diffRB: Uint8Array;
+  diffGB: Uint8Array;
 }
 
-function extractChannels(rgba: Uint8ClampedArray, numPixels: number): ChannelSet {
+function extractChannels(
+  rgba: Uint8ClampedArray,
+  numPixels: number,
+): ChannelSet {
   const luma = new Uint8Array(numPixels);
   const red = new Uint8Array(numPixels);
   const green = new Uint8Array(numPixels);
   const blue = new Uint8Array(numPixels);
+  const diffRG = new Uint8Array(numPixels);
+  const diffRB = new Uint8Array(numPixels);
+  const diffGB = new Uint8Array(numPixels);
 
   for (let i = 0; i < numPixels; i++) {
     const idx = i * 4;
@@ -125,19 +140,27 @@ function extractChannels(rgba: Uint8ClampedArray, numPixels: number): ChannelSet
     red[i] = r;
     green[i] = g;
     blue[i] = b;
+    diffRG[i] = Math.abs(r - g);
+    diffRB[i] = Math.abs(r - b);
+    diffGB[i] = Math.abs(g - b);
   }
 
-  return { luma, red, green, blue };
+  return { luma, red, green, blue, diffRG, diffRB, diffGB };
 }
 
 // ── Step 3: Channel selection by bimodality score ──────────────────
 
-function selectBestChannel(channels: ChannelSet): Uint8Array {
+function selectBestChannel(
+  channels: ChannelSet,
+): { channel: Uint8Array; score: number } {
   const candidates: Uint8Array[] = [
     channels.luma,
     channels.red,
     channels.green,
     channels.blue,
+    channels.diffRG,
+    channels.diffRB,
+    channels.diffGB,
   ];
 
   let best = channels.luma;
@@ -151,7 +174,7 @@ function selectBestChannel(channels: ChannelSet): Uint8Array {
     }
   }
 
-  return best;
+  return { channel: best, score: bestScore };
 }
 
 /**
@@ -259,6 +282,7 @@ function sauvolaThreshold(
   w: number,
   h: number,
   windowSize: number,
+  k: number = SAUVOLA_K,
 ): Uint8Array {
   const n = w * h;
   const halfW = (windowSize - 1) >> 1;
@@ -323,7 +347,7 @@ function sauvolaThreshold(
       const variance = sqSum / area - mean * mean;
       const stddev = Math.sqrt(Math.max(0, variance));
 
-      const threshold = mean * (1 + SAUVOLA_K * (stddev / SAUVOLA_R - 1));
+      const threshold = mean * (1 + k * (stddev / SAUVOLA_R - 1));
 
       output[y * w + x] = gray[y * w + x] > threshold ? 255 : 0;
     }
@@ -332,51 +356,7 @@ function sauvolaThreshold(
   return output;
 }
 
-// ── Step 6: Morphological open (erode → dilate) ────────────────────
-
-function morphOpen(binary: Uint8Array, w: number, h: number): Uint8Array {
-  // Erode: pixel is black (0) if ANY 3x3 neighbour is black
-  const eroded = new Uint8Array(binary.length);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      let minVal = 255;
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
-            const v = binary[ny * w + nx];
-            if (v < minVal) minVal = v;
-          }
-        }
-      }
-      eroded[y * w + x] = minVal;
-    }
-  }
-
-  // Dilate: pixel is white (255) if ANY 3x3 neighbour is white
-  const dilated = new Uint8Array(eroded.length);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      let maxVal = 0;
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
-            const v = eroded[ny * w + nx];
-            if (v > maxVal) maxVal = v;
-          }
-        }
-      }
-      dilated[y * w + x] = maxVal;
-    }
-  }
-
-  return dilated;
-}
-
-// ── Step 7: Write back + export ────────────────────────────────────
+// ── Step 6: Write back + export ────────────────────────────────────
 
 function writeToImageData(binary: Uint8Array, rgba: Uint8ClampedArray) {
   for (let i = 0; i < binary.length; i++) {
