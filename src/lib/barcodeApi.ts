@@ -1,5 +1,6 @@
 import type { ScannedNutrition } from '../models/types';
 import { getCachedBarcode, cacheBarcode } from './db';
+import { supabase } from './supabase';
 
 const KJ_PER_KCAL = 4.184;
 
@@ -38,8 +39,54 @@ function num(val: number | undefined): string {
   return val != null ? String(Math.round(val * 10) / 10) : '';
 }
 
+// --- Shared (Supabase) cache helpers ---
+
+async function getFromSharedCache(barcode: string): Promise<BarcodeResult | null> {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('barcode_cache')
+      .select('product_name, nutrition')
+      .eq('barcode', barcode)
+      .single();
+    if (error || !data) return null;
+    return {
+      found: true,
+      nutrition: data.nutrition as ScannedNutrition,
+      productName: data.product_name,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function saveToSharedCache(
+  barcode: string,
+  productName: string,
+  nutrition: ScannedNutrition
+): Promise<void> {
+  if (!supabase) return;
+  try {
+    await supabase
+      .from('barcode_cache')
+      .upsert(
+        {
+          barcode,
+          product_name: productName,
+          nutrition,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'barcode' }
+      );
+  } catch (err) {
+    console.warn('Shared cache write failed:', err);
+  }
+}
+
+// --- Main lookup function ---
+
 export async function lookupBarcode(barcode: string): Promise<BarcodeResult> {
-  // 1. Check local cache first
+  // 1. Check local cache first (instant)
   try {
     const cached = await getCachedBarcode(barcode);
     if (cached) {
@@ -50,10 +97,22 @@ export async function lookupBarcode(barcode: string): Promise<BarcodeResult> {
       };
     }
   } catch (err) {
-    console.warn('Cache read failed, falling back to API:', err);
+    console.warn('Local cache read failed:', err);
   }
 
-  // 2. Fetch from Open Food Facts API
+  // 2. Check shared Supabase cache (fast, ~100ms)
+  try {
+    const shared = await getFromSharedCache(barcode);
+    if (shared && shared.found && shared.nutrition) {
+      // Save to local cache for offline/fast access
+      try { await cacheBarcode(barcode, shared.productName, shared.nutrition); } catch {}
+      return shared;
+    }
+  } catch (err) {
+    console.warn('Shared cache read failed:', err);
+  }
+
+  // 3. Fetch from Open Food Facts API (slow, ~1-3s)
   try {
     const response = await fetch(
       `https://world.openfoodfacts.org/api/v2/product/${barcode}.json`,
@@ -93,14 +152,13 @@ export async function lookupBarcode(barcode: string): Promise<BarcodeResult> {
       rawText: `Barcode: ${barcode}`,
     };
 
-    // 3. Cache the successful result
-    try {
-      await cacheBarcode(barcode, product.product_name ?? '', nutrition);
-    } catch (err) {
-      console.warn('Cache write failed:', err);
-    }
+    const productName = product.product_name ?? '';
 
-    return { found: true, nutrition, productName: product.product_name ?? '' };
+    // Save to both caches
+    try { await cacheBarcode(barcode, productName, nutrition); } catch {}
+    try { await saveToSharedCache(barcode, productName, nutrition); } catch {}
+
+    return { found: true, nutrition, productName };
   } catch (err) {
     console.error('Barcode lookup failed:', err);
     return { found: false, nutrition: null, productName: '' };

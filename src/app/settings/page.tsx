@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useProfile } from '../../context/ProfileContext';
-import { calculateDailyTargets } from '../../lib/macros';
+import { calculateDailyTargets, intensityToGoal, goalToIntensity } from '../../lib/macros';
 import { deleteAllFoodLog, deleteAllEntries } from '../../lib/db';
-import type { ActivityLevel, Gender, WeightGoal, EnergyUnit, WeightUnit } from '../../models/types';
+import type { ActivityLevel, Gender, EnergyUnit, WeightUnit } from '../../models/types';
 import { formatEnergy, kgToDisplay, weightLabel, cmToDisplay, displayToKg } from '../../lib/units';
+import GoalSlider from '../../components/GoalSlider';
 import styles from './page.module.css';
 
 const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
@@ -15,12 +16,6 @@ const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
   moderate: 'Moderately Active',
   active: 'Active',
   veryActive: 'Very Active',
-};
-
-const GOAL_LABELS: Record<WeightGoal, string> = {
-  lose: 'Lose Weight',
-  maintain: 'Maintain Weight',
-  gain: 'Gain Weight',
 };
 
 export default function SettingsPage() {
@@ -36,7 +31,7 @@ export default function SettingsPage() {
   const [activity, setActivity] = useState<ActivityLevel>(
     profile?.activityLevel ?? 'moderate'
   );
-  const [goal, setGoal] = useState<WeightGoal>(profile?.goal ?? 'maintain');
+  const [goalIntensity, setGoalIntensity] = useState(profile?.goalIntensity ?? goalToIntensity(profile?.goal ?? 'maintain'));
 
   if (!profile) return null;
 
@@ -54,7 +49,7 @@ export default function SettingsPage() {
       parseFloat(height) || profile.heightCm,
       parseInt(age) || profile.age,
       activity,
-      goal
+      goalIntensity
     );
     await setProfile({
       ...profile,
@@ -63,7 +58,8 @@ export default function SettingsPage() {
       weightKg,
       heightCm: parseFloat(height) || profile.heightCm,
       activityLevel: activity,
-      goal,
+      goal: intensityToGoal(goalIntensity),
+      goalIntensity,
       dailyEnergyTargetKj: targets.energyKj,
       dailyProteinTargetG: targets.proteinG,
       dailyFatTargetG: targets.fatG,
@@ -81,7 +77,7 @@ export default function SettingsPage() {
     setAge(String(profile.age));
     setGender(profile.gender);
     setActivity(profile.activityLevel);
-    setGoal(profile.goal);
+    setGoalIntensity(profile.goalIntensity ?? goalToIntensity(profile.goal));
     setEditing(true);
   };
 
@@ -196,19 +192,9 @@ export default function SettingsPage() {
                 ))}
               </select>
             </div>
-            <div className={styles.row}>
+            <div className={styles.row} style={{ flexDirection: 'column', alignItems: 'stretch', gap: 0 }}>
               <span className={styles.label}>Goal</span>
-              <select
-                className={styles.select}
-                value={goal}
-                onChange={(e) => setGoal(e.target.value as WeightGoal)}
-              >
-                {Object.entries(GOAL_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v}
-                  </option>
-                ))}
-              </select>
+              <GoalSlider value={goalIntensity} onChange={setGoalIntensity} />
             </div>
             <div className={styles.editActions}>
               <button className={styles.cancelBtn} onClick={() => setEditing(false)}>
@@ -250,7 +236,12 @@ export default function SettingsPage() {
             <div className={styles.row}>
               <span className={styles.label}>Goal</span>
               <span className={styles.value}>
-                {GOAL_LABELS[profile.goal]}
+                {(() => {
+                  const gi = profile.goalIntensity ?? goalToIntensity(profile.goal);
+                  const adj = Math.round(gi * 7.5);
+                  if (Math.abs(adj) < 50) return 'Maintenance';
+                  return `${adj > 0 ? '+' : ''}${adj} kcal/day`;
+                })()}
               </span>
             </div>
           </>

@@ -6,6 +6,7 @@ import { ScannedNutrition } from '../models/types';
 interface ScanData {
   nutrition: ScannedNutrition;
   imageBlob: Blob | null;
+  barcode?: string; // present when user scanned label after barcode lookup failed
 }
 
 interface ScanContextValue {

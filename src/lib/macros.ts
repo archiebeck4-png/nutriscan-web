@@ -30,48 +30,65 @@ const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
   veryActive: 1.9,
 };
 
-// --- Goal calorie adjustments (kcal/day) ---
-const GOAL_ADJUSTMENTS: Record<WeightGoal, number> = {
-  lose: -500, // ~0.5 kg/week deficit
-  maintain: 0,
-  gain: 300, // lean bulk surplus
-};
-
 const KJ_PER_KCAL = 4.184;
 
+/**
+ * Convert legacy WeightGoal to numeric intensity.
+ * lose → -50, maintain → 0, gain → +50
+ */
+export function goalToIntensity(goal: WeightGoal): number {
+  switch (goal) {
+    case 'lose': return -50;
+    case 'gain': return 50;
+    case 'maintain':
+    default: return 0;
+  }
+}
+
+/**
+ * Derive a legacy WeightGoal label from intensity.
+ */
+export function intensityToGoal(intensity: number): WeightGoal {
+  if (intensity < -10) return 'lose';
+  if (intensity > 10) return 'gain';
+  return 'maintain';
+}
+
+/**
+ * Calculate daily targets using continuous goal intensity.
+ *
+ * goalIntensity: -100 (aggressive cut) to +100 (aggressive bulk)
+ * Maps to kcal adjustment via: intensity * 7.5 (range: -750 to +750 kcal/day)
+ *
+ * Macro split interpolates smoothly:
+ *   -100: protein 35%, fat 25%, carbs 40% (high protein for deep cut)
+ *      0: protein 25%, fat 30%, carbs 45% (maintenance)
+ *   +100: protein 25%, fat 20%, carbs 55% (high carbs for bulk)
+ */
 export function calculateDailyTargets(
   gender: Gender,
   weightKg: number,
   heightCm: number,
   age: number,
   activityLevel: ActivityLevel,
-  goal: WeightGoal
+  goalIntensity: number
 ): DailyTargets {
   const bmrKcal = calculateBmrKcal(gender, weightKg, heightCm, age);
   const tdeeKcal = bmrKcal * ACTIVITY_MULTIPLIERS[activityLevel];
-  const targetKcal = tdeeKcal + GOAL_ADJUSTMENTS[goal];
+
+  // Clamp intensity to -100..+100
+  const clamped = Math.max(-100, Math.min(100, goalIntensity));
+  const adjustmentKcal = clamped * 7.5;
+  const targetKcal = Math.max(1200, tdeeKcal + adjustmentKcal); // floor at 1200 kcal
   const targetKj = Math.round(targetKcal * KJ_PER_KCAL);
 
-  // Macro split based on goal
-  let proteinPct: number, fatPct: number, carbsPct: number;
-  switch (goal) {
-    case 'lose':
-      proteinPct = 0.3;
-      fatPct = 0.25;
-      carbsPct = 0.45;
-      break;
-    case 'gain':
-      proteinPct = 0.25;
-      fatPct = 0.25;
-      carbsPct = 0.5;
-      break;
-    case 'maintain':
-    default:
-      proteinPct = 0.25;
-      fatPct = 0.3;
-      carbsPct = 0.45;
-      break;
-  }
+  // Normalize to 0..1 where 0 = max deficit, 1 = max surplus
+  const t = (clamped + 100) / 200;
+
+  // Smooth macro split interpolation
+  const proteinPct = 0.35 - t * 0.10;          // 0.35 at -100, 0.25 at +100
+  const fatPct = 0.25 + 0.05 * (1 - Math.abs(2 * t - 1)); // peaks at 0.30 at center, 0.25 at edges
+  const carbsPct = 1 - proteinPct - fatPct;     // remainder: ~0.40 at -100, 0.45 at 0, ~0.55 at +100
 
   // Protein: 4 kcal/g, Fat: 9 kcal/g, Carbs: 4 kcal/g
   const proteinG = Math.round((targetKcal * proteinPct) / 4);

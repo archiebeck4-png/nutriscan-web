@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useScanData } from '../../../context/ScanContext';
-import { insertEntry, addFoodLogEntry } from '../../../lib/db';
+import { insertEntry, addFoodLogEntry, cacheBarcode } from '../../../lib/db';
+import { saveToSharedCache } from '../../../lib/barcodeApi';
 import { todayDateString } from '../../../lib/dates';
 import { parseServingSizeGrams, derivePerServingFrom100g } from '../../../lib/nutritionUtils';
 import type { ScannedNutrition, WebFoodEntry, FoodLogEntry } from '../../../models/types';
@@ -190,6 +191,16 @@ export default function ReviewPage() {
       };
       await addFoodLogEntry(logEntry);
 
+      // 3. If this was a barcode-initiated scan, cache the nutrition for that barcode
+      if (scanData.barcode) {
+        try {
+          await cacheBarcode(scanData.barcode, foodName, nutrition);
+          await saveToSharedCache(scanData.barcode, foodName, nutrition);
+        } catch (err) {
+          console.warn('Barcode cache save failed:', err);
+        }
+      }
+
       setScanData(null);
       router.push('/');
     } catch (error) {
@@ -220,6 +231,21 @@ export default function ReviewPage() {
           {isSaving ? 'Saving...' : 'Log'}
         </button>
       </div>
+
+      {/* Barcode association badge */}
+      {scanData.barcode && (
+        <div className={styles.barcodeTag}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="2" y="4" width="20" height="16" rx="2" />
+            <line x1="6" y1="8" x2="6" y2="16" />
+            <line x1="9" y1="8" x2="9" y2="16" />
+            <line x1="12" y1="8" x2="12" y2="16" />
+            <line x1="15" y1="8" x2="15" y2="16" />
+            <line x1="18" y1="8" x2="18" y2="16" />
+          </svg>
+          Barcode {scanData.barcode} — will be saved for future scans
+        </div>
+      )}
 
       <div className={styles.form}>
         {/* Food Details */}

@@ -21,6 +21,7 @@ export default function ScanPage() {
   const [navigating, setNavigating] = useState(false);
   const [isSmartProcessing, setIsSmartProcessing] = useState(false);
   const [barcodeStatus, setBarcodeStatus] = useState<string | null>(null);
+  const [pendingBarcode, setPendingBarcode] = useState<string | null>(null);
   const barcodeProcessingRef = useRef(false);
 
   useEffect(() => {
@@ -38,21 +39,20 @@ export default function ScanPage() {
         const result = await lookupBarcode(barcode);
         if (result.found && result.nutrition) {
           setNavigating(true);
+          setPendingBarcode(null);
           setScanData({ nutrition: result.nutrition, imageBlob: null });
           router.push('/add/review');
         } else {
-          setBarcodeStatus(`Product not found for barcode ${barcode}`);
-          setTimeout(() => {
-            setBarcodeStatus(null);
-            barcodeProcessingRef.current = false;
-          }, 3000);
-        }
-      } catch {
-        setBarcodeStatus('Lookup failed. Try scanning the label instead.');
-        setTimeout(() => {
+          // Product not found — prompt user to scan the label
+          setPendingBarcode(barcode);
           setBarcodeStatus(null);
           barcodeProcessingRef.current = false;
-        }, 3000);
+        }
+      } catch {
+        // Lookup failed — prompt user to scan the label
+        setPendingBarcode(barcode);
+        setBarcodeStatus(null);
+        barcodeProcessingRef.current = false;
       }
     },
     [navigating, setScanData, router]
@@ -87,7 +87,8 @@ export default function ScanPage() {
         return;
       }
 
-      setScanData({ nutrition, imageBlob });
+      setScanData({ nutrition, imageBlob, barcode: pendingBarcode ?? undefined });
+      setPendingBarcode(null);
       router.push('/add/review');
     } catch (err) {
       console.error('Scan error:', err);
@@ -116,7 +117,8 @@ export default function ScanPage() {
         return;
       }
 
-      setScanData({ nutrition, imageBlob });
+      setScanData({ nutrition, imageBlob, barcode: pendingBarcode ?? undefined });
+      setPendingBarcode(null);
       router.push('/add/review');
     } catch (err) {
       console.error('Upload scan error:', err);
@@ -214,6 +216,30 @@ export default function ScanPage() {
       {/* Barcode status message */}
       {barcodeStatus && (
         <div className={styles.barcodeStatus}>{barcodeStatus}</div>
+      )}
+
+      {/* Barcode not found — prompt to scan label */}
+      {pendingBarcode && !anyProcessing && (
+        <div className={styles.barcodeNotFoundOverlay}>
+          <div className={styles.barcodeNotFoundCard}>
+            <p className={styles.notFoundTitle}>Product not found</p>
+            <p className={styles.notFoundSubtitle}>
+              Barcode {pendingBarcode}
+            </p>
+            <p className={styles.notFoundHint}>
+              Take a photo of the nutrition label to add it.
+            </p>
+            <button
+              className={styles.notFoundDismiss}
+              onClick={() => {
+                setPendingBarcode(null);
+                barcodeProcessingRef.current = false;
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Navigating overlay */}

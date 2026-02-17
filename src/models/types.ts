@@ -22,6 +22,7 @@ export interface UserProfile {
   heightCm: number;
   activityLevel: ActivityLevel;
   goal: WeightGoal;
+  goalIntensity: number; // -100 (aggressive cut) to +100 (aggressive bulk)
 
   // Calculated daily targets
   dailyEnergyTargetKj: number;

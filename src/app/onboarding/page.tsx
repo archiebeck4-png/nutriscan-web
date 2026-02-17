@@ -3,13 +3,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useProfile } from '../../context/ProfileContext';
-import { calculateDailyTargets } from '../../lib/macros';
+import { calculateDailyTargets, intensityToGoal } from '../../lib/macros';
 import type {
-  WeightGoal,
   Gender,
   ActivityLevel,
   UserProfile,
 } from '../../models/types';
+import GoalSlider from '../../components/GoalSlider';
 import styles from './page.module.css';
 
 const ACTIVITY_OPTIONS: { value: ActivityLevel; label: string; desc: string }[] =
@@ -43,7 +43,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(0);
 
   // Form state
-  const [goal, setGoal] = useState<WeightGoal>('maintain');
+  const [goalIntensity, setGoalIntensity] = useState(0);
   const [gender, setGender] = useState<Gender>('male');
   const [age, setAge] = useState('');
   const [height, setHeight] = useState('');
@@ -73,7 +73,7 @@ export default function OnboardingPage() {
     parseFloat(height) || 170,
     parseInt(age) || 25,
     activity,
-    goal
+    goalIntensity
   );
 
   const handleFinish = async () => {
@@ -86,7 +86,8 @@ export default function OnboardingPage() {
       weightKg: parseFloat(weight) || 70,
       heightCm: parseFloat(height) || 170,
       activityLevel: activity,
-      goal,
+      goal: intensityToGoal(goalIntensity),
+      goalIntensity,
       dailyEnergyTargetKj: targets.energyKj,
       dailyProteinTargetG: targets.proteinG,
       dailyFatTargetG: targets.fatG,
@@ -120,44 +121,9 @@ export default function OnboardingPage() {
         <div className={styles.stepContent}>
           <h1 className={styles.title}>What&apos;s your goal?</h1>
           <p className={styles.subtitle}>
-            This helps us calculate your daily targets.
+            Drag the slider to set how aggressively you want to lose or gain weight.
           </p>
-          <div className={styles.cardGroup}>
-            {(
-              [
-                {
-                  value: 'lose' as WeightGoal,
-                  icon: '📉',
-                  label: 'Lose Weight',
-                  desc: 'Reduce body fat with a calorie deficit',
-                },
-                {
-                  value: 'maintain' as WeightGoal,
-                  icon: '⚖️',
-                  label: 'Maintain Weight',
-                  desc: 'Keep your current weight stable',
-                },
-                {
-                  value: 'gain' as WeightGoal,
-                  icon: '📈',
-                  label: 'Gain Weight',
-                  desc: 'Build muscle with a calorie surplus',
-                },
-              ] as const
-            ).map((opt) => (
-              <button
-                key={opt.value}
-                className={`${styles.card} ${
-                  goal === opt.value ? styles.cardSelected : ''
-                }`}
-                onClick={() => setGoal(opt.value)}
-              >
-                <span className={styles.cardIcon}>{opt.icon}</span>
-                <span className={styles.cardLabel}>{opt.label}</span>
-                <span className={styles.cardDesc}>{opt.desc}</span>
-              </button>
-            ))}
-          </div>
+          <GoalSlider value={goalIntensity} onChange={setGoalIntensity} />
         </div>
       )}
 

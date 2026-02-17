@@ -40,6 +40,21 @@ db.version(4).stores({
   barcodeCache: 'barcode, cachedAt',
 });
 
+// Version 5: add goalIntensity to profile
+db.version(5).stores({
+  entries: 'id, dateScanned',
+  foodLog: 'id, date, createdAt',
+  profile: 'id',
+  barcodeCache: 'barcode, cachedAt',
+}).upgrade((tx) => {
+  return tx.table('profile').toCollection().modify((profile) => {
+    if (profile.goalIntensity == null) {
+      const map: Record<string, number> = { lose: -50, maintain: 0, gain: 50 };
+      profile.goalIntensity = map[profile.goal] ?? 0;
+    }
+  });
+});
+
 export { db };
 
 // --- Saved food entries (existing) ---
