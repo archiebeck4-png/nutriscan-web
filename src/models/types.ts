@@ -76,6 +76,14 @@ export interface ScannedNutrition {
   rawText: string;
 }
 
+// --- Barcode cache entry ---
+export interface BarcodeCacheEntry {
+  barcode: string;          // primary key (EAN/UPC string)
+  productName: string;
+  nutrition: ScannedNutrition;
+  cachedAt: string;         // ISO timestamp
+}
+
 // --- Saved food entry (from scanning or library) ---
 export interface WebFoodEntry {
   id: string;

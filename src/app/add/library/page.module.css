@@ -157,3 +157,24 @@
   color: #fff;
   box-shadow: 0 1px 4px var(--accent-glow);
 }
+
+.deleteBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-right: 8px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.deleteBtn:active {
+  color: #ff4757;
+  background: rgba(255, 71, 87, 0.12);
+}

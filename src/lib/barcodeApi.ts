@@ -1,4 +1,5 @@
 import type { ScannedNutrition } from '../models/types';
+import { getCachedBarcode, cacheBarcode } from './db';
 
 const KJ_PER_KCAL = 4.184;
 
@@ -38,6 +39,21 @@ function num(val: number | undefined): string {
 }
 
 export async function lookupBarcode(barcode: string): Promise<BarcodeResult> {
+  // 1. Check local cache first
+  try {
+    const cached = await getCachedBarcode(barcode);
+    if (cached) {
+      return {
+        found: true,
+        nutrition: cached.nutrition,
+        productName: cached.productName,
+      };
+    }
+  } catch (err) {
+    console.warn('Cache read failed, falling back to API:', err);
+  }
+
+  // 2. Fetch from Open Food Facts API
   try {
     const response = await fetch(
       `https://world.openfoodfacts.org/api/v2/product/${barcode}.json`,
@@ -76,6 +92,13 @@ export async function lookupBarcode(barcode: string): Promise<BarcodeResult> {
 
       rawText: `Barcode: ${barcode}`,
     };
+
+    // 3. Cache the successful result
+    try {
+      await cacheBarcode(barcode, product.product_name ?? '', nutrition);
+    } catch (err) {
+      console.warn('Cache write failed:', err);
+    }
 
     return { found: true, nutrition, productName: product.product_name ?? '' };
   } catch (err) {

@@ -24,3 +24,18 @@ export function derivePer100gFromServing(
   if (!servingGrams || servingGrams <= 0) return null;
   return Math.round((perServingValue * (100 / servingGrams)) * 10) / 10;
 }
+
+/**
+ * Derive a per-serving value from a per-100g value + serving size.
+ * Inverse of derivePer100gFromServing.
+ * Formula: per100g * (servingGrams / 100)
+ */
+export function derivePerServingFrom100g(
+  per100gValue: number | null,
+  servingSizeStr: string | null
+): number | null {
+  if (per100gValue == null) return null;
+  const servingGrams = parseServingSizeGrams(servingSizeStr);
+  if (!servingGrams || servingGrams <= 0) return null;
+  return Math.round((per100gValue * (servingGrams / 100)) * 10) / 10;
+}

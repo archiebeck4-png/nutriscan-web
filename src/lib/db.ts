@@ -1,10 +1,11 @@
 import Dexie, { type EntityTable } from 'dexie';
-import { WebFoodEntry, FoodLogEntry, UserProfile } from '../models/types';
+import { WebFoodEntry, FoodLogEntry, UserProfile, BarcodeCacheEntry, ScannedNutrition } from '../models/types';
 
 const db = new Dexie('NutriScanDB') as Dexie & {
   entries: EntityTable<WebFoodEntry, 'id'>;
   foodLog: EntityTable<FoodLogEntry, 'id'>;
   profile: EntityTable<UserProfile, 'id'>;
+  barcodeCache: EntityTable<BarcodeCacheEntry, 'barcode'>;
 };
 
 // Version 1: original schema (preserved for backward compat)
@@ -29,6 +30,14 @@ db.version(3).stores({
     if (!profile.energyUnit) profile.energyUnit = 'kj';
     if (!profile.weightUnit) profile.weightUnit = 'kg';
   });
+});
+
+// Version 4: add barcode cache table
+db.version(4).stores({
+  entries: 'id, dateScanned',
+  foodLog: 'id, date, createdAt',
+  profile: 'id',
+  barcodeCache: 'barcode, cachedAt',
 });
 
 export { db };
@@ -85,4 +94,25 @@ export async function deleteAllFoodLog(): Promise<void> {
 
 export async function deleteAllEntries(): Promise<void> {
   await db.entries.clear();
+}
+
+// --- Barcode cache ---
+
+export async function getCachedBarcode(
+  barcode: string
+): Promise<BarcodeCacheEntry | undefined> {
+  return db.barcodeCache.get(barcode);
+}
+
+export async function cacheBarcode(
+  barcode: string,
+  productName: string,
+  nutrition: ScannedNutrition
+): Promise<void> {
+  await db.barcodeCache.put({
+    barcode,
+    productName,
+    nutrition,
+    cachedAt: new Date().toISOString(),
+  });
 }

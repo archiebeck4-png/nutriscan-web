@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useScanData } from '../../../context/ScanContext';
 import { insertEntry, addFoodLogEntry } from '../../../lib/db';
 import { todayDateString } from '../../../lib/dates';
-import { parseServingSizeGrams } from '../../../lib/nutritionUtils';
+import { parseServingSizeGrams, derivePerServingFrom100g } from '../../../lib/nutritionUtils';
 import type { ScannedNutrition, WebFoodEntry, FoodLogEntry } from '../../../models/types';
 import NutrientField from '../../../components/NutrientField';
 import styles from './page.module.css';
@@ -45,6 +45,47 @@ export default function ReviewPage() {
   const [gramsConsumed, setGramsConsumed] = useState('');
   const [showRawText, setShowRawText] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Auto-derive per-serving values from per-100g when user enters a serving size
+  useEffect(() => {
+    const servingGrams = parseServingSizeGrams(nutrition.servingSize);
+    if (!servingGrams || servingGrams <= 0) return;
+
+    const hasAnyPer100gData = !!(
+      nutrition.energyPer100g || nutrition.proteinPer100g ||
+      nutrition.fatPer100g || nutrition.carbsPer100g || nutrition.fiberPer100g
+    );
+    if (!hasAnyPer100gData) return;
+
+    const perServingFields = [
+      nutrition.energyPerServing,
+      nutrition.proteinPerServing,
+      nutrition.fatPerServing,
+      nutrition.carbsPerServing,
+      nutrition.fiberPerServing,
+    ];
+    const allPerServingEmpty = perServingFields.every(
+      (v) => !v || v.trim() === '' || v.trim() === '0'
+    );
+    if (!allPerServingEmpty) return;
+
+    // Derive per-serving from per-100g
+    const derive = (per100gStr: string): string => {
+      const val = parseFloat(per100gStr);
+      if (isNaN(val)) return '';
+      const result = derivePerServingFrom100g(val, nutrition.servingSize);
+      return result != null ? String(result) : '';
+    };
+
+    setNutrition((prev) => ({
+      ...prev,
+      energyPerServing: derive(prev.energyPer100g),
+      proteinPerServing: derive(prev.proteinPer100g),
+      fatPerServing: derive(prev.fatPer100g),
+      carbsPerServing: derive(prev.carbsPer100g),
+      fiberPerServing: derive(prev.fiberPer100g),
+    }));
+  }, [nutrition.servingSize]);
 
   if (!scanData) {
     return (

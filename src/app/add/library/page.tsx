@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, addFoodLogEntry } from '../../../lib/db';
+import { db, addFoodLogEntry, deleteEntry } from '../../../lib/db';
 import { todayDateString } from '../../../lib/dates';
 import { useProfile } from '../../../context/ProfileContext';
 import { kjToDisplay, energyLabel } from '../../../lib/units';
@@ -73,6 +73,12 @@ export default function LibraryPage() {
     router.push('/');
   };
 
+  const handleDelete = async (entry: WebFoodEntry) => {
+    if (confirm(`Delete "${entry.foodName}"?`)) {
+      await deleteEntry(entry.id);
+    }
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -112,6 +118,17 @@ export default function LibraryPage() {
             const mode = quantityModes[entry.id] || 'servings';
             return (
               <div key={entry.id} className={styles.item}>
+                <button
+                  className={styles.deleteBtn}
+                  onClick={() => handleDelete(entry)}
+                  aria-label={`Delete ${entry.foodName}`}
+                  type="button"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                  </svg>
+                </button>
                 <div className={styles.itemInfo}>
                   <span className={styles.itemName}>{entry.foodName}</span>
                   <span className={styles.itemMeta}>
