@@ -305,21 +305,3 @@
   white-space: nowrap;
 }
 
-/* Barcode status message (found / looking up / not found) */
-.barcodeStatus {
-  position: absolute;
-  top: max(56px, calc(env(safe-area-inset-top, 0px) + 48px));
-  left: 16px;
-  right: 16px;
-  z-index: 12;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 500;
-  padding: 14px 20px;
-  border-radius: 14px;
-  text-align: center;
-}

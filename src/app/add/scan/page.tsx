@@ -6,7 +6,6 @@ import { useCamera } from '../../../hooks/useCamera';
 import { useOcr } from '../../../hooks/useOcr';
 import { useBarcodeScanner } from '../../../hooks/useBarcodeScanner';
 import { smartRecognizeNutrition } from '../../../lib/smartRecognize';
-import { lookupBarcode } from '../../../lib/barcodeApi';
 import { useScanData } from '../../../context/ScanContext';
 import styles from './page.module.css';
 
@@ -20,7 +19,6 @@ export default function ScanPage() {
   const [error, setError] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
   const [isSmartProcessing, setIsSmartProcessing] = useState(false);
-  const [barcodeStatus, setBarcodeStatus] = useState<string | null>(null);
   const barcodeProcessingRef = useRef(false);
 
   // If there's already a barcode in ScanContext, we're in "scan the label" mode
@@ -30,45 +28,22 @@ export default function ScanPage() {
     initCamera();
   }, [initCamera]);
 
-  // Barcode detection callback
+  // Barcode detection — navigate immediately to lookup page
   const handleBarcodeDetected = useCallback(
-    async (barcode: string) => {
+    (barcode: string) => {
       if (navigating || barcodeProcessingRef.current) return;
       barcodeProcessingRef.current = true;
-      setBarcodeStatus(`Barcode found: ${barcode}. Looking up...`);
+      setNavigating(true);
 
-      try {
-        const result = await lookupBarcode(barcode);
-        if (result.found && result.nutrition) {
-          setNavigating(true);
-          setScanData({ nutrition: result.nutrition, imageBlob: null });
-          router.push('/add/review');
-        } else {
-          // Product not found — navigate to unknown barcode page
-          setNavigating(true);
-          const emptyNutrition = {
-            foodName: '', servingSize: '', servingsPerPackage: '',
-            energyPerServing: '', proteinPerServing: '', fatPerServing: '',
-            carbsPerServing: '', fiberPerServing: '',
-            energyPer100g: '', proteinPer100g: '', fatPer100g: '',
-            carbsPer100g: '', fiberPer100g: '', rawText: '',
-          };
-          setScanData({ nutrition: emptyNutrition, imageBlob: null, barcode });
-          router.push('/add/unknown-barcode');
-        }
-      } catch {
-        // Lookup failed — navigate to unknown barcode page
-        setNavigating(true);
-        const emptyNutrition = {
-          foodName: '', servingSize: '', servingsPerPackage: '',
-          energyPerServing: '', proteinPerServing: '', fatPerServing: '',
-          carbsPerServing: '', fiberPerServing: '',
-          energyPer100g: '', proteinPer100g: '', fatPer100g: '',
-          carbsPer100g: '', fiberPer100g: '', rawText: '',
-        };
-        setScanData({ nutrition: emptyNutrition, imageBlob: null, barcode });
-        router.push('/add/unknown-barcode');
-      }
+      const emptyNutrition = {
+        foodName: '', servingSize: '', servingsPerPackage: '',
+        energyPerServing: '', proteinPerServing: '', fatPerServing: '',
+        carbsPerServing: '', fiberPerServing: '',
+        energyPer100g: '', proteinPer100g: '', fatPer100g: '',
+        carbsPer100g: '', fiberPer100g: '', rawText: '',
+      };
+      setScanData({ nutrition: emptyNutrition, imageBlob: null, barcode });
+      router.push('/add/barcode-lookup');
     },
     [navigating, setScanData, router]
   );
@@ -85,18 +60,25 @@ export default function ScanPage() {
       onBarcodeDetected: handleBarcodeDetected,
     });
 
-  // Manual capture — does full-quality smart recognition
+  // Manual capture — freezes camera, then does smart recognition
   const handleCapture = async () => {
     if (isProcessing || isSmartProcessing || navigating) return;
     stopBarcode();
     setError(null);
-    setIsSmartProcessing(true);
 
     try {
       const imageBlob = await capture();
+      // Freeze camera on the captured frame
+      if (videoRef.current && !videoRef.current.paused) {
+        videoRef.current.pause();
+      }
+      setIsSmartProcessing(true);
+
       const { nutrition, rawLines } = await smartRecognizeNutrition(imageBlob);
 
       if (rawLines.length === 0) {
+        // Resume camera if no text detected
+        if (videoRef.current) videoRef.current.play();
         setError(
           'No text detected. Try holding the camera closer to the nutrition label.'
         );
@@ -107,6 +89,8 @@ export default function ScanPage() {
       router.push('/add/review');
     } catch (err) {
       console.error('Scan error:', err);
+      // Resume camera on error
+      if (videoRef.current) videoRef.current.play();
       setError('Failed to scan. Please try again.');
     } finally {
       setIsSmartProcessing(false);
@@ -231,16 +215,11 @@ export default function ScanPage() {
       </div>
 
       {/* Barcode scanning indicator */}
-      {isBarcodeScanning && !barcodeStatus && !existingBarcode && (
+      {isBarcodeScanning && !existingBarcode && (
         <div className={styles.barcodeIndicator}>
           <span className={styles.scanningDot} />
           Scanning for barcodes...
         </div>
-      )}
-
-      {/* Barcode status message */}
-      {barcodeStatus && (
-        <div className={styles.barcodeStatus}>{barcodeStatus}</div>
       )}
 
       {/* Navigating overlay */}

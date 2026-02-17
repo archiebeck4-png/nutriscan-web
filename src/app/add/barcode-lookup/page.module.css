@@ -1,0 +1,42 @@
+.container {
+  min-height: 100vh;
+  background: var(--background);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.barcode {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: monospace;
+  margin: 0;
+}
+
+.message {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin: 0;
+}
