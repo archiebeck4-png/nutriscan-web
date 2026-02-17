@@ -5,9 +5,10 @@ import styles from './EnergyRing.module.css';
 interface EnergyRingProps {
   current: number;
   target: number;
+  unit?: string;
 }
 
-export default function EnergyRing({ current, target }: EnergyRingProps) {
+export default function EnergyRing({ current, target, unit = 'kJ' }: EnergyRingProps) {
   const ratio = target > 0 ? Math.min(current / target, 1.2) : 0;
   const isOver = current > target;
 
@@ -56,7 +57,7 @@ export default function EnergyRing({ current, target }: EnergyRingProps) {
         <span className={styles.currentValue}>
           {current.toLocaleString()}
         </span>
-        <span className={styles.unit}>kJ</span>
+        <span className={styles.unit}>{unit}</span>
         <span className={styles.remaining}>
           {isOver
             ? `${(current - target).toLocaleString()} over`

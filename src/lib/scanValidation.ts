@@ -64,6 +64,12 @@ export function scoreScanResult(nutrition: ScannedNutrition): ScanScore {
     fieldsFound.push('Serving');
   }
 
+  // Bonus: if serving size is present, it's a strong signal of a valid label
+  // This helps labels where OCR struggles with some macros but nails the header
+  if (hasServing && hasEnergy) {
+    score += 0.05;
+  }
+
   // Hard gate: energy must be present for auto-navigation
   const isValid = hasEnergy && score >= AUTO_NAVIGATE_THRESHOLD;
 

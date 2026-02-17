@@ -1,14 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { WebFoodEntry } from '../models/types';
+import type { WebFoodEntry, EnergyUnit } from '../models/types';
+import { kjToDisplay, energyLabel } from '../lib/units';
 import styles from './EntryCard.module.css';
 
 interface EntryCardProps {
   entry: WebFoodEntry;
+  energyUnit?: EnergyUnit;
 }
 
-export default function EntryCard({ entry }: EntryCardProps) {
+export default function EntryCard({ entry, energyUnit = 'kj' }: EntryCardProps) {
   const dateStr = new Date(entry.dateScanned).toLocaleDateString('en-AU', {
     day: 'numeric',
     month: 'short',
@@ -17,8 +19,10 @@ export default function EntryCard({ entry }: EntryCardProps) {
 
   const energyStr =
     entry.energyPer100g != null
-      ? `${entry.energyPer100g.toFixed(0)} kJ per 100g`
-      : null;
+      ? `${Math.round(kjToDisplay(entry.energyPer100g, energyUnit))} ${energyLabel(energyUnit)} per 100g`
+      : entry.energyPerServing != null
+        ? `${Math.round(kjToDisplay(entry.energyPerServing, energyUnit))} ${energyLabel(energyUnit)}/serve`
+        : null;
 
   return (
     <Link href={`/entry/${entry.id}`} className={styles.card}>

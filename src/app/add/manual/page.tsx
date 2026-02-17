@@ -4,12 +4,16 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { addFoodLogEntry } from '../../../lib/db';
 import { todayDateString } from '../../../lib/dates';
+import { useProfile } from '../../../context/ProfileContext';
+import { energyLabel, displayToKj } from '../../../lib/units';
 import type { FoodLogEntry } from '../../../models/types';
 import NutrientField from '../../../components/NutrientField';
 import styles from './page.module.css';
 
 export default function ManualEntryPage() {
   const router = useRouter();
+  const { profile } = useProfile();
+  const eu = profile?.energyUnit ?? 'kj';
   const [foodName, setFoodName] = useState('');
   const [energy, setEnergy] = useState('');
   const [protein, setProtein] = useState('');
@@ -23,12 +27,16 @@ export default function ManualEntryPage() {
     setIsSaving(true);
 
     try {
+      // Convert energy from user's display unit to kJ for storage
+      const rawEnergy = parseFloat(energy) || 0;
+      const energyKj = displayToKj(rawEnergy, eu);
+
       const entry: FoodLogEntry = {
         id: crypto.randomUUID(),
         date: todayDateString(),
         createdAt: new Date().toISOString(),
         foodName: foodName.trim() || 'Unknown Food',
-        energyKj: parseFloat(energy) || 0,
+        energyKj,
         proteinG: parseFloat(protein) || 0,
         fatG: parseFloat(fat) || 0,
         carbsG: parseFloat(carbs) || 0,
@@ -78,7 +86,7 @@ export default function ManualEntryPage() {
 
         <div className="sectionHeader">NUTRITION</div>
         <div className="section">
-          <NutrientField label="Energy (kJ)" value={energy} onChange={setEnergy} />
+          <NutrientField label={`Energy (${energyLabel(eu)})`} value={energy} onChange={setEnergy} />
           <NutrientField label="Protein (g)" value={protein} onChange={setProtein} />
           <NutrientField label="Fat (g)" value={fat} onChange={setFat} />
           <NutrientField label="Carbs (g)" value={carbs} onChange={setCarbs} />

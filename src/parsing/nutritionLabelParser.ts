@@ -147,16 +147,58 @@ function extractTableRegion(lines: string[]): string[] {
 }
 
 /**
- * Extract the serving size from lines like "Serving Size: 150g"
+ * Extract the serving size from lines like:
+ *   "Serving Size: 150g"
+ *   "Serving size 40g"
+ *   "per serving (150g)"
+ *   "per 40g serving"
+ *   "per serve: 30g"
+ *   Column headers: "Per Serving (250ml)"
  */
 function extractServingSize(lines: string[]): string {
+  // Pass 1: explicit "serving size" label (most reliable)
   for (const line of lines) {
     const match = line.match(/serving\s*size\s*:?\s*(.+)/);
     if (match) {
-      return match[1].trim();
+      return cleanServingSize(match[1]);
     }
   }
+
+  // Pass 2: "per serving (Xg)" or "per serve (Xg)" in column headers
+  for (const line of lines) {
+    const match = line.match(/per\s*serv(?:ing|e)\s*\(([^)]+)\)/);
+    if (match) {
+      return cleanServingSize(match[1]);
+    }
+  }
+
+  // Pass 3: "per Xg serving" or "per Xml serving"
+  for (const line of lines) {
+    const match = line.match(/per\s+(\d+\.?\d*\s*(?:g|ml))\s+serv/);
+    if (match) {
+      return cleanServingSize(match[1]);
+    }
+  }
+
+  // Pass 4: "per serve: Xg" or "per serve Xg"
+  for (const line of lines) {
+    const match = line.match(/per\s*serve\s*:?\s*(\d+\.?\d*\s*(?:g|ml))/);
+    if (match) {
+      return cleanServingSize(match[1]);
+    }
+  }
+
   return '';
+}
+
+/**
+ * Clean up a serving size string — trim whitespace, remove trailing junk
+ */
+function cleanServingSize(raw: string): string {
+  let s = raw.trim();
+  // Remove trailing non-alphanumeric junk (OCR artifacts)
+  s = s.replace(/[^a-z0-9.)]+$/i, '');
+  return s;
 }
 
 /**

@@ -4,71 +4,75 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCamera } from '../../../hooks/useCamera';
 import { useOcr } from '../../../hooks/useOcr';
-import { useContinuousScan } from '../../../hooks/useContinuousScan';
+import { useBarcodeScanner } from '../../../hooks/useBarcodeScanner';
 import { smartRecognizeNutrition } from '../../../lib/smartRecognize';
+import { lookupBarcode } from '../../../lib/barcodeApi';
 import { useScanData } from '../../../context/ScanContext';
-import { ScannedNutrition } from '../../../models/types';
 import styles from './page.module.css';
-
-function LiveValue({
-  label,
-  value,
-  unit,
-}: {
-  label: string;
-  value: string;
-  unit: string;
-}) {
-  return (
-    <div className={styles.liveValue}>
-      <span className={styles.liveValueLabel}>{label}</span>
-      <span className={styles.liveValueNumber}>
-        {value ? `${value}${unit}` : '--'}
-      </span>
-    </div>
-  );
-}
 
 export default function ScanPage() {
   const router = useRouter();
   const { videoRef, permissionState, isReady, capture, initCamera } =
     useCamera();
-  const { recognize, isProcessing, isReady: ocrReady, progress } = useOcr();
+  const { isProcessing, isReady: ocrReady, progress } = useOcr();
   const { setScanData } = useScanData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
   const [isSmartProcessing, setIsSmartProcessing] = useState(false);
+  const [barcodeStatus, setBarcodeStatus] = useState<string | null>(null);
+  const barcodeProcessingRef = useRef(false);
 
   useEffect(() => {
     initCamera();
   }, [initCamera]);
 
-  // Callback when continuous scan finds a valid result
-  const handleValidResult = useCallback(
-    (nutrition: ScannedNutrition, imageBlob: Blob) => {
-      setNavigating(true);
-      setScanData({ nutrition, imageBlob });
-      router.push('/add/review');
+  // Barcode detection callback
+  const handleBarcodeDetected = useCallback(
+    async (barcode: string) => {
+      if (navigating || barcodeProcessingRef.current) return;
+      barcodeProcessingRef.current = true;
+      setBarcodeStatus(`Barcode found: ${barcode}. Looking up...`);
+
+      try {
+        const result = await lookupBarcode(barcode);
+        if (result.found && result.nutrition) {
+          setNavigating(true);
+          setScanData({ nutrition: result.nutrition, imageBlob: null });
+          router.push('/add/review');
+        } else {
+          setBarcodeStatus(`Product not found for barcode ${barcode}`);
+          setTimeout(() => {
+            setBarcodeStatus(null);
+            barcodeProcessingRef.current = false;
+          }, 3000);
+        }
+      } catch {
+        setBarcodeStatus('Lookup failed. Try scanning the label instead.');
+        setTimeout(() => {
+          setBarcodeStatus(null);
+          barcodeProcessingRef.current = false;
+        }, 3000);
+      }
     },
-    [setScanData, router],
+    [navigating, setScanData, router]
   );
 
-  // Continuous scan hook
+  // Barcode scanner hook — runs continuously in background
   const anyProcessing = isProcessing || isSmartProcessing;
-  const continuousScanEnabled =
-    isReady && ocrReady && !anyProcessing && !navigating;
-  const { isScanning, currentResult, currentScore, stop: stopContinuousScan } =
-    useContinuousScan({
+  const barcodeScanEnabled =
+    isReady && !anyProcessing && !navigating && !barcodeProcessingRef.current;
+  const { isScanning: isBarcodeScanning, stop: stopBarcode } =
+    useBarcodeScanner({
       videoRef,
-      onValidResult: handleValidResult,
-      enabled: continuousScanEnabled,
+      enabled: barcodeScanEnabled,
+      onBarcodeDetected: handleBarcodeDetected,
     });
 
-  // Manual capture — stops continuous scan, does full-quality smart recognition
+  // Manual capture — does full-quality smart recognition
   const handleCapture = async () => {
     if (isProcessing || isSmartProcessing || navigating) return;
-    stopContinuousScan();
+    stopBarcode();
     setError(null);
     setIsSmartProcessing(true);
 
@@ -78,7 +82,7 @@ export default function ScanPage() {
 
       if (rawLines.length === 0) {
         setError(
-          'No text detected. Try holding the camera closer to the nutrition label.',
+          'No text detected. Try holding the camera closer to the nutrition label.'
         );
         return;
       }
@@ -97,7 +101,7 @@ export default function ScanPage() {
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || isProcessing || isSmartProcessing || navigating) return;
-    stopContinuousScan();
+    stopBarcode();
     setError(null);
     setIsSmartProcessing(true);
 
@@ -107,7 +111,7 @@ export default function ScanPage() {
 
       if (rawLines.length === 0) {
         setError(
-          'No text detected in the uploaded image. Try a clearer photo of the nutrition label.',
+          'No text detected in the uploaded image. Try a clearer photo of the nutrition label.'
         );
         return;
       }
@@ -192,75 +196,31 @@ export default function ScanPage() {
 
       {/* Guide overlay */}
       <div className={styles.overlay}>
-        <div
-          className={`${styles.guideBox} ${isScanning ? styles.guideBoxScanning : ''}`}
-        >
+        <div className={styles.guideBox}>
           <span className={styles.guideText}>
-            {isScanning
-              ? 'Scanning... hold steady'
-              : 'Position the nutrition label within the frame'}
+            Position the nutrition label and tap to capture
           </span>
         </div>
       </div>
 
-      {/* Live detected values panel */}
-      {isScanning &&
-        currentResult &&
-        currentScore &&
-        currentScore.fieldsFound.length > 0 && (
-          <div className={styles.liveResultsPanel}>
-            <div className={styles.liveResultsHeader}>
-              <span className={styles.scanningDot} />
-              Detected ({currentScore.fieldsFound.length}/6)
-            </div>
-            <div className={styles.liveResultsGrid}>
-              <LiveValue
-                label="Energy"
-                value={
-                  currentResult.energyPerServing || currentResult.energyPer100g
-                }
-                unit="kJ"
-              />
-              <LiveValue
-                label="Protein"
-                value={
-                  currentResult.proteinPerServing ||
-                  currentResult.proteinPer100g
-                }
-                unit="g"
-              />
-              <LiveValue
-                label="Fat"
-                value={
-                  currentResult.fatPerServing || currentResult.fatPer100g
-                }
-                unit="g"
-              />
-              <LiveValue
-                label="Carbs"
-                value={
-                  currentResult.carbsPerServing || currentResult.carbsPer100g
-                }
-                unit="g"
-              />
-            </div>
-            {/* Score bar */}
-            <div className={styles.scoreBarContainer}>
-              <div
-                className={styles.scoreBar}
-                style={{
-                  width: `${Math.round(currentScore.score * 100)}%`,
-                }}
-              />
-            </div>
-          </div>
-        )}
+      {/* Barcode scanning indicator */}
+      {isBarcodeScanning && !barcodeStatus && (
+        <div className={styles.barcodeIndicator}>
+          <span className={styles.scanningDot} />
+          Scanning for barcodes...
+        </div>
+      )}
+
+      {/* Barcode status message */}
+      {barcodeStatus && (
+        <div className={styles.barcodeStatus}>{barcodeStatus}</div>
+      )}
 
       {/* Navigating overlay */}
       {navigating && (
         <div className={styles.processingOverlay}>
           <div className={styles.processingBadge}>
-            Label detected! Opening review...
+            Opening review...
           </div>
         </div>
       )}
@@ -317,9 +277,29 @@ export default function ScanPage() {
             disabled={anyProcessing || navigating}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="3" width="18" height="18" rx="3" stroke="white" strokeWidth="1.5"/>
-              <path d="M3 16l5-5 4 4 3-3 6 6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <circle cx="15.5" cy="8.5" r="1.5" stroke="white" strokeWidth="1.5"/>
+              <rect
+                x="3"
+                y="3"
+                width="18"
+                height="18"
+                rx="3"
+                stroke="white"
+                strokeWidth="1.5"
+              />
+              <path
+                d="M3 16l5-5 4 4 3-3 6 6"
+                stroke="white"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle
+                cx="15.5"
+                cy="8.5"
+                r="1.5"
+                stroke="white"
+                strokeWidth="1.5"
+              />
             </svg>
           </button>
 
@@ -339,11 +319,7 @@ export default function ScanPage() {
           {/* Spacer for visual balance */}
           <div className={styles.uploadButtonSpacer} />
         </div>
-        <span className={styles.captureHint}>
-          {isScanning
-            ? 'Auto-scanning... tap to capture manually'
-            : 'Tap to scan'}
-        </span>
+        <span className={styles.captureHint}>Tap to scan nutrition label</span>
       </div>
     </div>
   );

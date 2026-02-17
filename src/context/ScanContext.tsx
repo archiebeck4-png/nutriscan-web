@@ -5,7 +5,7 @@ import { ScannedNutrition } from '../models/types';
 
 interface ScanData {
   nutrition: ScannedNutrition;
-  imageBlob: Blob;
+  imageBlob: Blob | null;
 }
 
 interface ScanContextValue {

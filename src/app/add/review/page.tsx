@@ -5,9 +5,19 @@ import { useRouter } from 'next/navigation';
 import { useScanData } from '../../../context/ScanContext';
 import { insertEntry, addFoodLogEntry } from '../../../lib/db';
 import { todayDateString } from '../../../lib/dates';
+import { parseServingSizeGrams } from '../../../lib/nutritionUtils';
 import type { ScannedNutrition, WebFoodEntry, FoodLogEntry } from '../../../models/types';
 import NutrientField from '../../../components/NutrientField';
 import styles from './page.module.css';
+
+function derivePer100g(perServing: string, servingSize: string): string {
+  const servingGrams = parseServingSizeGrams(servingSize);
+  const perServingVal = parseFloat(perServing);
+  if (servingGrams && servingGrams > 0 && !isNaN(perServingVal)) {
+    return String(Math.round((perServingVal * (100 / servingGrams)) * 10) / 10);
+  }
+  return '';
+}
 
 export default function ReviewPage() {
   const router = useRouter();
@@ -57,6 +67,22 @@ export default function ReviewPage() {
     return isNaN(num) ? null : num;
   };
 
+  // Check if grams mode is possible
+  const hasAnyPer100g = !!(
+    nutrition.energyPer100g || nutrition.proteinPer100g ||
+    nutrition.fatPer100g || nutrition.carbsPer100g
+  );
+  const canDeriveFromServing = !!parseServingSizeGrams(nutrition.servingSize);
+  const canUseGramsMode = hasAnyPer100g || canDeriveFromServing;
+
+  // Get effective per100g value (from data or derived)
+  const getEffectivePer100g = (per100g: string, perServing: string): number | null => {
+    const direct = parseNum(per100g);
+    if (direct != null) return direct;
+    const derived = derivePer100g(perServing, nutrition.servingSize);
+    return parseNum(derived);
+  };
+
   const handleSave = async () => {
     if (isSaving) return;
     setIsSaving(true);
@@ -64,6 +90,7 @@ export default function ReviewPage() {
     try {
       const entryId = crypto.randomUUID();
       const foodName = nutrition.foodName.trim() || 'Unknown Food';
+      const isBarcode = nutrition.rawText?.startsWith('Barcode:');
 
       // 1. Save to food library
       const entry: WebFoodEntry = {
@@ -93,11 +120,11 @@ export default function ReviewPage() {
       if (quantityMode === 'grams') {
         const grams = parseFloat(gramsConsumed) || 0;
         const factor = grams / 100;
-        energyKj = (parseNum(nutrition.energyPer100g) ?? 0) * factor;
-        proteinG = (parseNum(nutrition.proteinPer100g) ?? 0) * factor;
-        fatG = (parseNum(nutrition.fatPer100g) ?? 0) * factor;
-        carbsG = (parseNum(nutrition.carbsPer100g) ?? 0) * factor;
-        fiberG = (parseNum(nutrition.fiberPer100g) ?? 0) * factor;
+        energyKj = (getEffectivePer100g(nutrition.energyPer100g, nutrition.energyPerServing) ?? 0) * factor;
+        proteinG = (getEffectivePer100g(nutrition.proteinPer100g, nutrition.proteinPerServing) ?? 0) * factor;
+        fatG = (getEffectivePer100g(nutrition.fatPer100g, nutrition.fatPerServing) ?? 0) * factor;
+        carbsG = (getEffectivePer100g(nutrition.carbsPer100g, nutrition.carbsPerServing) ?? 0) * factor;
+        fiberG = (getEffectivePer100g(nutrition.fiberPer100g, nutrition.fiberPerServing) ?? 0) * factor;
       } else {
         const qty = parseFloat(servingsConsumed) || 1;
         energyKj = (parseNum(nutrition.energyPerServing) ?? 0) * qty;
@@ -118,7 +145,7 @@ export default function ReviewPage() {
         carbsG,
         fiberG,
         savedFoodId: entryId,
-        source: 'scan',
+        source: isBarcode ? 'barcode' : 'scan',
       };
       await addFoodLogEntry(logEntry);
 
@@ -200,7 +227,8 @@ export default function ReviewPage() {
               </button>
               <button
                 className={`${styles.segmentButton} ${quantityMode === 'grams' ? styles.segmentActive : ''}`}
-                onClick={() => setQuantityMode('grams')}
+                onClick={() => canUseGramsMode && setQuantityMode('grams')}
+                disabled={!canUseGramsMode}
                 type="button"
               >
                 Grams

@@ -8,6 +8,10 @@ export type ActivityLevel =
   | 'active'
   | 'veryActive';
 
+// --- Unit preferences ---
+export type EnergyUnit = 'kj' | 'cal';
+export type WeightUnit = 'kg' | 'lbs';
+
 // --- User profile (single-user, stored in IndexedDB) ---
 export interface UserProfile {
   id: string; // always 'default'
@@ -25,6 +29,10 @@ export interface UserProfile {
   dailyFatTargetG: number;
   dailyCarbsTargetG: number;
   dailyFiberTargetG: number;
+
+  // Unit preferences
+  energyUnit: EnergyUnit;
+  weightUnit: WeightUnit;
 
   createdAt: string;
   updatedAt: string;
@@ -44,7 +52,7 @@ export interface FoodLogEntry {
   fiberG: number;
 
   savedFoodId: string | null;
-  source: 'manual' | 'scan' | 'library';
+  source: 'manual' | 'scan' | 'library' | 'barcode';
 }
 
 // --- Scanned nutrition (OCR parsing result) ---

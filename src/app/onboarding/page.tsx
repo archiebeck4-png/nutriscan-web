@@ -92,6 +92,8 @@ export default function OnboardingPage() {
       dailyFatTargetG: targets.fatG,
       dailyCarbsTargetG: targets.carbsG,
       dailyFiberTargetG: targets.fiberG,
+      energyUnit: 'kj',
+      weightUnit: 'kg',
       createdAt: now,
       updatedAt: now,
     };

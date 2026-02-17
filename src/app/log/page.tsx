@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, deleteFoodLogEntry, deleteEntry } from '../../lib/db';
 import { formatDateDisplay } from '../../lib/dates';
+import { useProfile } from '../../context/ProfileContext';
+import { kjToDisplay, energyLabel } from '../../lib/units';
 import type { FoodLogEntry } from '../../models/types';
 import EntryCard from '../../components/EntryCard';
 import EmptyState from '../../components/EmptyState';
@@ -12,6 +14,8 @@ import styles from './page.module.css';
 type Tab = 'diary' | 'saved';
 
 export default function LogPage() {
+  const { profile } = useProfile();
+  const eu = profile?.energyUnit ?? 'kj';
   const [activeTab, setActiveTab] = useState<Tab>('diary');
 
   const foodLogEntries = useLiveQuery(() =>
@@ -88,7 +92,7 @@ export default function LogPage() {
                       <div className={styles.logInfo}>
                         <span className={styles.logName}>{entry.foodName}</span>
                         <span className={styles.logMeta}>
-                          {Math.round(entry.energyKj)} kJ &middot; P{' '}
+                          {Math.round(kjToDisplay(entry.energyKj, eu))} {energyLabel(eu)} &middot; P{' '}
                           {Math.round(entry.proteinG)}g &middot; F{' '}
                           {Math.round(entry.fatG)}g &middot; C{' '}
                           {Math.round(entry.carbsG)}g
@@ -124,7 +128,7 @@ export default function LogPage() {
             <div className="section">
               {savedEntries.map((entry) => (
                 <div key={entry.id} className={styles.savedRow}>
-                  <EntryCard entry={entry} />
+                  <EntryCard entry={entry} energyUnit={eu} />
                   <button
                     className={styles.deleteBtn}
                     onClick={() => handleDeleteSaved(entry.id)}

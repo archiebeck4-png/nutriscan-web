@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useProfile } from '../../context/ProfileContext';
 import { calculateDailyTargets } from '../../lib/macros';
 import { deleteAllFoodLog, deleteAllEntries } from '../../lib/db';
-import type { ActivityLevel, Gender, WeightGoal } from '../../models/types';
+import type { ActivityLevel, Gender, WeightGoal, EnergyUnit, WeightUnit } from '../../models/types';
+import { formatEnergy, kgToDisplay, weightLabel, cmToDisplay, displayToKg } from '../../lib/units';
 import styles from './page.module.css';
 
 const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
@@ -39,10 +40,17 @@ export default function SettingsPage() {
 
   if (!profile) return null;
 
+  const eu = profile.energyUnit ?? 'kj';
+  const wu = profile.weightUnit ?? 'kg';
+
   const handleSave = async () => {
+    // Convert weight from display unit to kg for storage
+    const rawWeight = parseFloat(weight) || (wu === 'lbs' ? kgToDisplay(profile.weightKg, 'lbs') : profile.weightKg);
+    const weightKg = displayToKg(rawWeight, wu);
+
     const targets = calculateDailyTargets(
       gender,
-      parseFloat(weight) || profile.weightKg,
+      weightKg,
       parseFloat(height) || profile.heightCm,
       parseInt(age) || profile.age,
       activity,
@@ -52,7 +60,7 @@ export default function SettingsPage() {
       ...profile,
       gender,
       age: parseInt(age) || profile.age,
-      weightKg: parseFloat(weight) || profile.weightKg,
+      weightKg,
       heightCm: parseFloat(height) || profile.heightCm,
       activityLevel: activity,
       goal,
@@ -64,6 +72,25 @@ export default function SettingsPage() {
       updatedAt: new Date().toISOString(),
     });
     setEditing(false);
+  };
+
+  // Start editing — pre-fill weight in display unit
+  const handleStartEditing = () => {
+    setWeight(String(Math.round(kgToDisplay(profile.weightKg, wu) * 10) / 10));
+    setHeight(String(profile.heightCm));
+    setAge(String(profile.age));
+    setGender(profile.gender);
+    setActivity(profile.activityLevel);
+    setGoal(profile.goal);
+    setEditing(true);
+  };
+
+  const handleEnergyUnitChange = async (unit: EnergyUnit) => {
+    await setProfile({ ...profile, energyUnit: unit, updatedAt: new Date().toISOString() });
+  };
+
+  const handleWeightUnitChange = async (unit: WeightUnit) => {
+    await setProfile({ ...profile, weightUnit: unit, updatedAt: new Date().toISOString() });
   };
 
   const handleClearFoodLog = async () => {
@@ -86,7 +113,6 @@ export default function SettingsPage() {
     ) {
       await deleteAllFoodLog();
       await deleteAllEntries();
-      // Delete profile by saving with cleared data — or we delete it
       const { db } = await import('../../lib/db');
       await db.profile.delete('default');
       window.location.href = '/onboarding';
@@ -103,7 +129,7 @@ export default function SettingsPage() {
         {!editing && (
           <button
             className={styles.editBtn}
-            onClick={() => setEditing(true)}
+            onClick={handleStartEditing}
           >
             Edit
           </button>
@@ -148,7 +174,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className={styles.row}>
-              <span className={styles.label}>Weight (kg)</span>
+              <span className={styles.label}>Weight ({weightLabel(wu)})</span>
               <input
                 className={styles.input}
                 value={weight}
@@ -207,11 +233,13 @@ export default function SettingsPage() {
             </div>
             <div className={styles.row}>
               <span className={styles.label}>Height</span>
-              <span className={styles.value}>{profile.heightCm} cm</span>
+              <span className={styles.value}>{cmToDisplay(profile.heightCm, wu)}</span>
             </div>
             <div className={styles.row}>
               <span className={styles.label}>Weight</span>
-              <span className={styles.value}>{profile.weightKg} kg</span>
+              <span className={styles.value}>
+                {Math.round(kgToDisplay(profile.weightKg, wu) * 10) / 10} {weightLabel(wu)}
+              </span>
             </div>
             <div className={styles.row}>
               <span className={styles.label}>Activity</span>
@@ -229,13 +257,52 @@ export default function SettingsPage() {
         )}
       </div>
 
+      {/* Measurements section */}
+      <div className="sectionHeader">MEASUREMENTS</div>
+      <div className="section">
+        <div className={styles.row}>
+          <span className={styles.label}>Energy</span>
+          <div className={styles.miniSegmented}>
+            <button
+              className={`${styles.miniSeg} ${eu === 'kj' ? styles.miniSegActive : ''}`}
+              onClick={() => handleEnergyUnitChange('kj')}
+            >
+              kJ
+            </button>
+            <button
+              className={`${styles.miniSeg} ${eu === 'cal' ? styles.miniSegActive : ''}`}
+              onClick={() => handleEnergyUnitChange('cal')}
+            >
+              Calories
+            </button>
+          </div>
+        </div>
+        <div className={styles.row}>
+          <span className={styles.label}>Weight</span>
+          <div className={styles.miniSegmented}>
+            <button
+              className={`${styles.miniSeg} ${wu === 'kg' ? styles.miniSegActive : ''}`}
+              onClick={() => handleWeightUnitChange('kg')}
+            >
+              kg
+            </button>
+            <button
+              className={`${styles.miniSeg} ${wu === 'lbs' ? styles.miniSegActive : ''}`}
+              onClick={() => handleWeightUnitChange('lbs')}
+            >
+              lbs
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Daily targets */}
       <div className="sectionHeader">DAILY TARGETS</div>
       <div className="section">
         <div className={styles.row}>
           <span className={styles.label}>Energy</span>
           <span className={styles.value}>
-            {profile.dailyEnergyTargetKj.toLocaleString()} kJ
+            {formatEnergy(profile.dailyEnergyTargetKj, eu)}
           </span>
         </div>
         <div className={styles.row}>

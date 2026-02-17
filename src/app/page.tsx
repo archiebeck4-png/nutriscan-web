@@ -6,6 +6,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, deleteFoodLogEntry } from '../lib/db';
 import { todayDateString, formatDateDisplay, addDays, isToday } from '../lib/dates';
 import { useProfile } from '../context/ProfileContext';
+import { kjToDisplay, energyLabel } from '../lib/units';
 import EnergyRing from '../components/EnergyRing';
 import MacroProgressBar from '../components/MacroProgressBar';
 import FoodLogItem from '../components/FoodLogItem';
@@ -45,6 +46,8 @@ export default function DashboardPage() {
 
   if (!profile) return null;
 
+  const eu = profile.energyUnit ?? 'kj';
+
   return (
     <div className={styles.container}>
       {/* Date navigation */}
@@ -75,8 +78,9 @@ export default function DashboardPage() {
       {/* Energy ring */}
       <div className={styles.ringSection}>
         <EnergyRing
-          current={Math.round(totals.energyKj)}
-          target={profile.dailyEnergyTargetKj}
+          current={Math.round(kjToDisplay(totals.energyKj, eu))}
+          target={Math.round(kjToDisplay(profile.dailyEnergyTargetKj, eu))}
+          unit={energyLabel(eu)}
         />
       </div>
 
@@ -130,6 +134,7 @@ export default function DashboardPage() {
                 key={entry.id}
                 entry={entry}
                 onDelete={handleDelete}
+                energyUnit={eu}
               />
             ))
           )}

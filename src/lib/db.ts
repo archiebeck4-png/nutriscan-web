@@ -19,6 +19,18 @@ db.version(2).stores({
   profile: 'id',
 });
 
+// Version 3: add unit preferences to profile
+db.version(3).stores({
+  entries: 'id, dateScanned',
+  foodLog: 'id, date, createdAt',
+  profile: 'id',
+}).upgrade((tx) => {
+  return tx.table('profile').toCollection().modify((profile) => {
+    if (!profile.energyUnit) profile.energyUnit = 'kj';
+    if (!profile.weightUnit) profile.weightUnit = 'kg';
+  });
+});
+
 export { db };
 
 // --- Saved food entries (existing) ---

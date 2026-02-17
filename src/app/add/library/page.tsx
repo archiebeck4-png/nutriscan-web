@@ -5,12 +5,17 @@ import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, addFoodLogEntry } from '../../../lib/db';
 import { todayDateString } from '../../../lib/dates';
+import { useProfile } from '../../../context/ProfileContext';
+import { kjToDisplay, energyLabel } from '../../../lib/units';
+import { derivePer100gFromServing } from '../../../lib/nutritionUtils';
 import type { WebFoodEntry, FoodLogEntry } from '../../../models/types';
 import EmptyState from '../../../components/EmptyState';
 import styles from './page.module.css';
 
 export default function LibraryPage() {
   const router = useRouter();
+  const { profile } = useProfile();
+  const eu = profile?.energyUnit ?? 'kj';
   const [search, setSearch] = useState('');
   const [servings, setServings] = useState<Record<string, string>>({});
   const [quantityModes, setQuantityModes] = useState<Record<string, 'servings' | 'grams'>>({});
@@ -31,11 +36,17 @@ export default function LibraryPage() {
     if (mode === 'grams') {
       const g = parseFloat(grams[entry.id] || '0') || 0;
       const factor = g / 100;
-      energyKj = (entry.energyPer100g ?? 0) * factor;
-      proteinG = (entry.proteinPer100g ?? 0) * factor;
-      fatG = (entry.fatPer100g ?? 0) * factor;
-      carbsG = (entry.carbsPer100g ?? 0) * factor;
-      fiberG = (entry.fiberPer100g ?? 0) * factor;
+      // Use per100g if available, otherwise derive from perServing + servingSize
+      const e100 = entry.energyPer100g ?? derivePer100gFromServing(entry.energyPerServing, entry.servingSize);
+      const p100 = entry.proteinPer100g ?? derivePer100gFromServing(entry.proteinPerServing, entry.servingSize);
+      const f100 = entry.fatPer100g ?? derivePer100gFromServing(entry.fatPerServing, entry.servingSize);
+      const c100 = entry.carbsPer100g ?? derivePer100gFromServing(entry.carbsPerServing, entry.servingSize);
+      const fi100 = entry.fiberPer100g ?? derivePer100gFromServing(entry.fiberPerServing, entry.servingSize);
+      energyKj = (e100 ?? 0) * factor;
+      proteinG = (p100 ?? 0) * factor;
+      fatG = (f100 ?? 0) * factor;
+      carbsG = (c100 ?? 0) * factor;
+      fiberG = (fi100 ?? 0) * factor;
     } else {
       const qty = parseFloat(servings[entry.id] || '1') || 1;
       energyKj = (entry.energyPerServing ?? 0) * qty;
@@ -104,7 +115,7 @@ export default function LibraryPage() {
                 <div className={styles.itemInfo}>
                   <span className={styles.itemName}>{entry.foodName}</span>
                   <span className={styles.itemMeta}>
-                    {entry.energyPerServing ?? '--'} kJ/serve
+                    {entry.energyPerServing != null ? Math.round(kjToDisplay(entry.energyPerServing, eu)) : '--'} {energyLabel(eu)}/serve
                     {entry.servingSize ? ` (${entry.servingSize})` : ''}
                   </span>
                 </div>

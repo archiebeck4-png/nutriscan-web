@@ -3,6 +3,8 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { getEntryById, deleteEntry } from '../../../lib/db';
+import { useProfile } from '../../../context/ProfileContext';
+import { kjToDisplay, energyLabel } from '../../../lib/units';
 import { WebFoodEntry } from '../../../models/types';
 import NutrientRow from '../../../components/NutrientRow';
 import styles from './page.module.css';
@@ -10,6 +12,8 @@ import styles from './page.module.css';
 export default function EntryDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { profile } = useProfile();
+  const eu = profile?.energyUnit ?? 'kj';
   const [entry, setEntry] = useState<WebFoodEntry | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,7 +90,7 @@ export default function EntryDetailPage({ params }: { params: Promise<{ id: stri
       {/* Per Serving */}
       <div className="sectionHeader">PER SERVING</div>
       <div className="section">
-        <NutrientRow label="Energy" value={entry.energyPerServing} unit="kJ" />
+        <NutrientRow label="Energy" value={entry.energyPerServing != null ? Math.round(kjToDisplay(entry.energyPerServing, eu) * 10) / 10 : null} unit={energyLabel(eu)} />
         <NutrientRow label="Protein" value={entry.proteinPerServing} unit="g" />
         <NutrientRow label="Fat" value={entry.fatPerServing} unit="g" />
         <NutrientRow label="Carbs" value={entry.carbsPerServing} unit="g" />
@@ -96,7 +100,7 @@ export default function EntryDetailPage({ params }: { params: Promise<{ id: stri
       {/* Per 100g */}
       <div className="sectionHeader">PER 100g</div>
       <div className="section">
-        <NutrientRow label="Energy" value={entry.energyPer100g} unit="kJ" />
+        <NutrientRow label="Energy" value={entry.energyPer100g != null ? Math.round(kjToDisplay(entry.energyPer100g, eu) * 10) / 10 : null} unit={energyLabel(eu)} />
         <NutrientRow label="Protein" value={entry.proteinPer100g} unit="g" />
         <NutrientRow label="Fat" value={entry.fatPer100g} unit="g" />
         <NutrientRow label="Carbs" value={entry.carbsPer100g} unit="g" />
