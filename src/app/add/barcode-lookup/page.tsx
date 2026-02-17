@@ -10,15 +10,22 @@ export default function BarcodeLookupPage() {
   const router = useRouter();
   const { scanData, setScanData } = useScanData();
   const barcode = scanData?.barcode;
+  const barcodeRef = useRef(barcode);
   const lookupStarted = useRef(false);
 
+  // Capture the barcode on first render so re-renders after setScanData don't lose it
+  if (!barcodeRef.current && barcode) {
+    barcodeRef.current = barcode;
+  }
+
   useEffect(() => {
-    if (!barcode || lookupStarted.current) return;
+    const code = barcodeRef.current;
+    if (!code || lookupStarted.current) return;
     lookupStarted.current = true;
 
     (async () => {
       try {
-        const result = await lookupBarcode(barcode);
+        const result = await lookupBarcode(code);
         if (result.found && result.nutrition) {
           setScanData({ nutrition: result.nutrition, imageBlob: null });
           router.replace('/add/review');
@@ -30,7 +37,7 @@ export default function BarcodeLookupPage() {
             energyPer100g: '', proteinPer100g: '', fatPer100g: '',
             carbsPer100g: '', fiberPer100g: '', rawText: '',
           };
-          setScanData({ nutrition: emptyNutrition, imageBlob: null, barcode });
+          setScanData({ nutrition: emptyNutrition, imageBlob: null, barcode: code });
           router.replace('/add/unknown-barcode');
         }
       } catch {
@@ -41,13 +48,13 @@ export default function BarcodeLookupPage() {
           energyPer100g: '', proteinPer100g: '', fatPer100g: '',
           carbsPer100g: '', fiberPer100g: '', rawText: '',
         };
-        setScanData({ nutrition: emptyNutrition, imageBlob: null, barcode });
+        setScanData({ nutrition: emptyNutrition, imageBlob: null, barcode: code });
         router.replace('/add/unknown-barcode');
       }
     })();
-  }, [barcode, setScanData, router]);
+  }, [setScanData, router]);
 
-  if (!barcode) {
+  if (!barcodeRef.current) {
     router.replace('/add/scan');
     return null;
   }
