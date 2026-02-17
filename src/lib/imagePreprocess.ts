@@ -20,6 +20,7 @@ export interface PreprocessOptions {
 }
 
 const FAST_MAX_DIMENSION = 1200;
+const QUALITY_MAX_DIMENSION = 2400;
 
 /**
  * Preprocess a camera capture for better OCR accuracy.
@@ -38,14 +39,13 @@ export async function preprocessForOcr(
   let w = imageBitmap.width;
   let h = imageBitmap.height;
 
-  // Optional downscale for fast mode
-  if (options.fast) {
-    const maxDim = Math.max(w, h);
-    if (maxDim > FAST_MAX_DIMENSION) {
-      const scale = FAST_MAX_DIMENSION / maxDim;
-      w = Math.round(w * scale);
-      h = Math.round(h * scale);
-    }
+  // Downscale large images — reduces noise and speeds up processing
+  const maxDim = options.fast ? FAST_MAX_DIMENSION : QUALITY_MAX_DIMENSION;
+  const currentMax = Math.max(w, h);
+  if (currentMax > maxDim) {
+    const scale = maxDim / currentMax;
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
   }
 
   canvas.width = w;

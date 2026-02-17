@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCamera } from '../../../hooks/useCamera';
 import { useOcr } from '../../../hooks/useOcr';
 import { useContinuousScan } from '../../../hooks/useContinuousScan';
-import { parseNutritionLabel } from '../../../parsing/nutritionLabelParser';
-import { smartRecognize } from '../../../lib/smartRecognize';
+import { smartRecognizeNutrition } from '../../../lib/smartRecognize';
 import { useScanData } from '../../../context/ScanContext';
 import { ScannedNutrition } from '../../../models/types';
 import styles from './page.module.css';
@@ -75,16 +74,15 @@ export default function ScanPage() {
 
     try {
       const imageBlob = await capture();
-      const ocrLines = await smartRecognize(imageBlob);
+      const { nutrition, rawLines } = await smartRecognizeNutrition(imageBlob);
 
-      if (ocrLines.length === 0) {
+      if (rawLines.length === 0) {
         setError(
           'No text detected. Try holding the camera closer to the nutrition label.',
         );
         return;
       }
 
-      const nutrition = parseNutritionLabel(ocrLines);
       setScanData({ nutrition, imageBlob });
       router.push('/add/review');
     } catch (err) {
@@ -105,16 +103,15 @@ export default function ScanPage() {
 
     try {
       const imageBlob: Blob = file;
-      const ocrLines = await smartRecognize(imageBlob);
+      const { nutrition, rawLines } = await smartRecognizeNutrition(imageBlob);
 
-      if (ocrLines.length === 0) {
+      if (rawLines.length === 0) {
         setError(
           'No text detected in the uploaded image. Try a clearer photo of the nutrition label.',
         );
         return;
       }
 
-      const nutrition = parseNutritionLabel(ocrLines);
       setScanData({ nutrition, imageBlob });
       router.push('/add/review');
     } catch (err) {
