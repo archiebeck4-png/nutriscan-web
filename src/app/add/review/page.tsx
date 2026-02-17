@@ -342,16 +342,6 @@ export default function ReviewPage() {
           <NutrientField label="Fiber (g)" value={nutrition.fiberPerServing} onChange={(v) => updateField('fiberPerServing', v)} />
         </div>
 
-        {/* Per 100g */}
-        <div className="sectionHeader">PER 100g</div>
-        <div className="section">
-          <NutrientField label="Energy (kJ)" value={nutrition.energyPer100g} onChange={(v) => updateField('energyPer100g', v)} />
-          <NutrientField label="Protein (g)" value={nutrition.proteinPer100g} onChange={(v) => updateField('proteinPer100g', v)} />
-          <NutrientField label="Fat (g)" value={nutrition.fatPer100g} onChange={(v) => updateField('fatPer100g', v)} />
-          <NutrientField label="Carbs (g)" value={nutrition.carbsPer100g} onChange={(v) => updateField('carbsPer100g', v)} />
-          <NutrientField label="Fiber (g)" value={nutrition.fiberPer100g} onChange={(v) => updateField('fiberPer100g', v)} />
-        </div>
-
         {/* Raw OCR Text */}
         {nutrition.rawText && (
           <>

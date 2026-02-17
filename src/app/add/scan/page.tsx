@@ -15,14 +15,16 @@ export default function ScanPage() {
   const { videoRef, permissionState, isReady, capture, initCamera } =
     useCamera();
   const { isProcessing, isReady: ocrReady, progress } = useOcr();
-  const { setScanData } = useScanData();
+  const { scanData, setScanData } = useScanData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
   const [isSmartProcessing, setIsSmartProcessing] = useState(false);
   const [barcodeStatus, setBarcodeStatus] = useState<string | null>(null);
-  const [pendingBarcode, setPendingBarcode] = useState<string | null>(null);
   const barcodeProcessingRef = useRef(false);
+
+  // If there's already a barcode in ScanContext, we're in "scan the label" mode
+  const existingBarcode = scanData?.barcode ?? null;
 
   useEffect(() => {
     initCamera();
@@ -39,29 +41,43 @@ export default function ScanPage() {
         const result = await lookupBarcode(barcode);
         if (result.found && result.nutrition) {
           setNavigating(true);
-          setPendingBarcode(null);
           setScanData({ nutrition: result.nutrition, imageBlob: null });
           router.push('/add/review');
         } else {
-          // Product not found — prompt user to scan the label
-          setPendingBarcode(barcode);
-          setBarcodeStatus(null);
-          barcodeProcessingRef.current = false;
+          // Product not found — navigate to unknown barcode page
+          setNavigating(true);
+          const emptyNutrition = {
+            foodName: '', servingSize: '', servingsPerPackage: '',
+            energyPerServing: '', proteinPerServing: '', fatPerServing: '',
+            carbsPerServing: '', fiberPerServing: '',
+            energyPer100g: '', proteinPer100g: '', fatPer100g: '',
+            carbsPer100g: '', fiberPer100g: '', rawText: '',
+          };
+          setScanData({ nutrition: emptyNutrition, imageBlob: null, barcode });
+          router.push('/add/unknown-barcode');
         }
       } catch {
-        // Lookup failed — prompt user to scan the label
-        setPendingBarcode(barcode);
-        setBarcodeStatus(null);
-        barcodeProcessingRef.current = false;
+        // Lookup failed — navigate to unknown barcode page
+        setNavigating(true);
+        const emptyNutrition = {
+          foodName: '', servingSize: '', servingsPerPackage: '',
+          energyPerServing: '', proteinPerServing: '', fatPerServing: '',
+          carbsPerServing: '', fiberPerServing: '',
+          energyPer100g: '', proteinPer100g: '', fatPer100g: '',
+          carbsPer100g: '', fiberPer100g: '', rawText: '',
+        };
+        setScanData({ nutrition: emptyNutrition, imageBlob: null, barcode });
+        router.push('/add/unknown-barcode');
       }
     },
     [navigating, setScanData, router]
   );
 
   // Barcode scanner hook — runs continuously in background
+  // Disabled when in "scan the label" mode (existingBarcode set)
   const anyProcessing = isProcessing || isSmartProcessing;
   const barcodeScanEnabled =
-    isReady && !anyProcessing && !navigating && !barcodeProcessingRef.current;
+    isReady && !anyProcessing && !navigating && !barcodeProcessingRef.current && !existingBarcode;
   const { isScanning: isBarcodeScanning, stop: stopBarcode } =
     useBarcodeScanner({
       videoRef,
@@ -87,8 +103,7 @@ export default function ScanPage() {
         return;
       }
 
-      setScanData({ nutrition, imageBlob, barcode: pendingBarcode ?? undefined });
-      setPendingBarcode(null);
+      setScanData({ nutrition, imageBlob, barcode: existingBarcode ?? undefined });
       router.push('/add/review');
     } catch (err) {
       console.error('Scan error:', err);
@@ -117,8 +132,7 @@ export default function ScanPage() {
         return;
       }
 
-      setScanData({ nutrition, imageBlob, barcode: pendingBarcode ?? undefined });
-      setPendingBarcode(null);
+      setScanData({ nutrition, imageBlob, barcode: existingBarcode ?? undefined });
       router.push('/add/review');
     } catch (err) {
       console.error('Upload scan error:', err);
@@ -165,8 +179,17 @@ export default function ScanPage() {
     );
   }
 
-  // Permission prompt
-  if (permissionState === 'prompt' || permissionState === 'loading') {
+  // Loading — camera is initializing (permission already granted or being checked)
+  if (permissionState === 'loading') {
+    return (
+      <div className={styles.centered}>
+        <span style={{ color: 'var(--text-secondary)', fontSize: 17 }}>Starting camera...</span>
+      </div>
+    );
+  }
+
+  // Permission prompt — only shown on very first visit
+  if (permissionState === 'prompt') {
     return (
       <div className={styles.centered}>
         <h2 className={styles.permissionTitle}>Camera Access</h2>
@@ -200,13 +223,15 @@ export default function ScanPage() {
       <div className={styles.overlay}>
         <div className={styles.guideBox}>
           <span className={styles.guideText}>
-            Position the nutrition label and tap to capture
+            {existingBarcode
+              ? `Scan the nutrition label for barcode ${existingBarcode}`
+              : 'Position the nutrition label and tap to capture'}
           </span>
         </div>
       </div>
 
       {/* Barcode scanning indicator */}
-      {isBarcodeScanning && !barcodeStatus && (
+      {isBarcodeScanning && !barcodeStatus && !existingBarcode && (
         <div className={styles.barcodeIndicator}>
           <span className={styles.scanningDot} />
           Scanning for barcodes...
@@ -216,30 +241,6 @@ export default function ScanPage() {
       {/* Barcode status message */}
       {barcodeStatus && (
         <div className={styles.barcodeStatus}>{barcodeStatus}</div>
-      )}
-
-      {/* Barcode not found — prompt to scan label */}
-      {pendingBarcode && !anyProcessing && (
-        <div className={styles.barcodeNotFoundOverlay}>
-          <div className={styles.barcodeNotFoundCard}>
-            <p className={styles.notFoundTitle}>Product not found</p>
-            <p className={styles.notFoundSubtitle}>
-              Barcode {pendingBarcode}
-            </p>
-            <p className={styles.notFoundHint}>
-              Take a photo of the nutrition label to add it.
-            </p>
-            <button
-              className={styles.notFoundDismiss}
-              onClick={() => {
-                setPendingBarcode(null);
-                barcodeProcessingRef.current = false;
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
       )}
 
       {/* Navigating overlay */}
