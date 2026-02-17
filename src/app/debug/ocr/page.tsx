@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { preprocessForOcr, type PreprocessOptions } from '../../../lib/imagePreprocess';
+import { preprocessForOcr, type PreprocessOptions, type GrayscaleMode } from '../../../lib/imagePreprocess';
 import {
   recognizePreprocessed,
   preloadOcr,
@@ -12,6 +12,8 @@ import { scoreScanResult } from '../../../lib/scanValidation';
 import type { ScannedNutrition } from '../../../models/types';
 import type { ScanScore } from '../../../lib/scanValidation';
 import styles from './page.module.css';
+
+const ALL_MODES: GrayscaleMode[] = ['luma', 'red', 'green', 'blue', 'invert'];
 
 interface TestResult {
   name: string;
@@ -28,6 +30,14 @@ interface TestResult {
   grayscaleMode?: string;
 }
 
+interface ImageGroup {
+  name: string;
+  fileName: string;
+  blob: Blob;
+  results: TestResult[];
+  bestMode?: string;
+}
+
 async function processImage(
   imageBlob: Blob,
   name: string,
@@ -37,18 +47,10 @@ async function processImage(
   const start = performance.now();
   try {
     const originalUrl = URL.createObjectURL(imageBlob);
-
-    // Preprocess
     const preprocessed = await preprocessForOcr(imageBlob, options ?? {});
     const preprocessedUrl = URL.createObjectURL(preprocessed);
-
-    // OCR on preprocessed image
     const ocrLines = await recognizePreprocessed(preprocessed);
-
-    // Parse
     const nutrition = parseNutritionLabel(ocrLines);
-
-    // Score
     const score = scoreScanResult(nutrition);
 
     return {
@@ -71,11 +73,12 @@ async function processImage(
       status: 'error',
       error: String(err),
       durationMs: performance.now() - start,
+      grayscaleMode: options?.grayscaleMode ?? 'luma',
     };
   }
 }
 
-function ResultCard({ result }: { result: TestResult }) {
+function ResultCard({ result, isBest }: { result: TestResult; isBest: boolean }) {
   const [showRaw, setShowRaw] = useState(false);
 
   const statusClass =
@@ -88,9 +91,12 @@ function ResultCard({ result }: { result: TestResult }) {
           : styles.statusPending;
 
   return (
-    <div className={styles.labelCard}>
+    <div className={`${styles.labelCard} ${isBest ? styles.bestCard : ''}`}>
       <div className={styles.labelHeader}>
-        <span className={styles.labelName}>{result.name}</span>
+        <span className={styles.labelName}>
+          {result.name}
+          {isBest && <span className={styles.bestTag}>BEST</span>}
+        </span>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           {result.grayscaleMode && result.status === 'done' && (
             <span className={styles.modeTag}>{result.grayscaleMode}</span>
@@ -100,7 +106,6 @@ function ResultCard({ result }: { result: TestResult }) {
           </span>
         </div>
       </div>
-      <div className={styles.labelDesc}>{result.description}</div>
 
       {result.status === 'error' && (
         <div className={styles.errorText}>{result.error}</div>
@@ -108,14 +113,7 @@ function ResultCard({ result }: { result: TestResult }) {
 
       {result.status === 'done' && (
         <>
-          {/* Images */}
           <div className={styles.imagesRow}>
-            {result.originalUrl && (
-              <div className={styles.imageWrapper}>
-                <span className={styles.imageLabel}>Original</span>
-                <img src={result.originalUrl} alt="Original" />
-              </div>
-            )}
             {result.preprocessedUrl && (
               <div className={styles.imageWrapper}>
                 <span className={styles.imageLabel}>Preprocessed</span>
@@ -124,70 +122,37 @@ function ResultCard({ result }: { result: TestResult }) {
             )}
           </div>
 
-          {/* Parsed values */}
           <div className={styles.sectionTitle}>Parsed Values</div>
           <div className={styles.nutrientGrid}>
             <div className={styles.nutrientHeader}>Nutrient</div>
             <div className={styles.nutrientHeader}>Per Serving</div>
             <div className={styles.nutrientHeader}>Per 100g</div>
-
-            <NutrientRow
-              label="Energy (kJ)"
-              perServing={result.nutrition?.energyPerServing}
-              per100g={result.nutrition?.energyPer100g}
-            />
-            <NutrientRow
-              label="Protein (g)"
-              perServing={result.nutrition?.proteinPerServing}
-              per100g={result.nutrition?.proteinPer100g}
-            />
-            <NutrientRow
-              label="Fat (g)"
-              perServing={result.nutrition?.fatPerServing}
-              per100g={result.nutrition?.fatPer100g}
-            />
-            <NutrientRow
-              label="Carbs (g)"
-              perServing={result.nutrition?.carbsPerServing}
-              per100g={result.nutrition?.carbsPer100g}
-            />
-            <NutrientRow
-              label="Fiber (g)"
-              perServing={result.nutrition?.fiberPerServing}
-              per100g={result.nutrition?.fiberPer100g}
-            />
+            <NutrientRow label="Energy (kJ)" perServing={result.nutrition?.energyPerServing} per100g={result.nutrition?.energyPer100g} />
+            <NutrientRow label="Protein (g)" perServing={result.nutrition?.proteinPerServing} per100g={result.nutrition?.proteinPer100g} />
+            <NutrientRow label="Fat (g)" perServing={result.nutrition?.fatPerServing} per100g={result.nutrition?.fatPer100g} />
+            <NutrientRow label="Carbs (g)" perServing={result.nutrition?.carbsPerServing} per100g={result.nutrition?.carbsPer100g} />
+            <NutrientRow label="Fiber (g)" perServing={result.nutrition?.fiberPerServing} per100g={result.nutrition?.fiberPer100g} />
           </div>
 
-          {/* Serving info */}
           {(result.nutrition?.servingSize || result.nutrition?.servingsPerPackage) && (
             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6 }}>
-              {result.nutrition.servingSize && `Serving: ${result.nutrition.servingSize}`}
-              {result.nutrition.servingSize && result.nutrition.servingsPerPackage && ' · '}
-              {result.nutrition.servingsPerPackage && `Per pkg: ${result.nutrition.servingsPerPackage}`}
+              {result.nutrition?.servingSize && `Serving: ${result.nutrition.servingSize}`}
+              {result.nutrition?.servingSize && result.nutrition?.servingsPerPackage && ' · '}
+              {result.nutrition?.servingsPerPackage && `Per pkg: ${result.nutrition.servingsPerPackage}`}
             </div>
           )}
 
-          {/* Score */}
           <div className={styles.scoreRow}>
-            <span
-              className={`${styles.scoreBadge} ${
-                result.score?.isValid ? styles.scoreValid : styles.scoreInvalid
-              }`}
-            >
+            <span className={`${styles.scoreBadge} ${result.score?.isValid ? styles.scoreValid : styles.scoreInvalid}`}>
               Score: {result.score ? (result.score.score * 100).toFixed(0) : 0}%
               {result.score?.isValid ? ' VALID' : ' INVALID'}
             </span>
-            <span className={styles.scoreFields}>
-              {result.score?.fieldsFound.join(', ')}
-            </span>
+            <span className={styles.scoreFields}>{result.score?.fieldsFound.join(', ')}</span>
             {result.durationMs && (
-              <span className={styles.timing}>
-                {(result.durationMs / 1000).toFixed(1)}s
-              </span>
+              <span className={styles.timing}>{(result.durationMs / 1000).toFixed(1)}s</span>
             )}
           </div>
 
-          {/* Raw OCR text (collapsible) */}
           <button
             className={styles.sectionTitle}
             style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, width: '100%', textAlign: 'left', color: 'inherit' }}
@@ -196,9 +161,7 @@ function ResultCard({ result }: { result: TestResult }) {
             Raw OCR Text {showRaw ? '▼' : '▶'}
           </button>
           {showRaw && (
-            <pre className={styles.rawText}>
-              {result.rawText || '(no text detected)'}
-            </pre>
+            <pre className={styles.rawText}>{result.rawText || '(no text detected)'}</pre>
           )}
         </>
       )}
@@ -206,25 +169,72 @@ function ResultCard({ result }: { result: TestResult }) {
   );
 }
 
-function NutrientRow({
-  label,
-  perServing,
-  per100g,
-}: {
-  label: string;
-  perServing?: string;
-  per100g?: string;
-}) {
+function NutrientRow({ label, perServing, per100g }: { label: string; perServing?: string; per100g?: string }) {
   return (
     <>
       <span className={styles.nutrientLabel}>{label}</span>
-      <span className={perServing ? styles.nutrientValue : styles.nutrientMissing}>
-        {perServing || '--'}
-      </span>
-      <span className={per100g ? styles.nutrientValue : styles.nutrientMissing}>
-        {per100g || '--'}
-      </span>
+      <span className={perServing ? styles.nutrientValue : styles.nutrientMissing}>{perServing || '--'}</span>
+      <span className={per100g ? styles.nutrientValue : styles.nutrientMissing}>{per100g || '--'}</span>
     </>
+  );
+}
+
+function ScoreMatrix({ groups }: { groups: ImageGroup[] }) {
+  if (groups.length === 0 || groups[0].results.length === 0) return null;
+
+  return (
+    <div className={styles.labelCard}>
+      <div className={styles.labelName} style={{ marginBottom: 12 }}>Score Comparison Matrix</div>
+      <div style={{ overflowX: 'auto' }}>
+        <table className={styles.matrixTable}>
+          <thead>
+            <tr>
+              <th>Image</th>
+              {ALL_MODES.map((mode) => (
+                <th key={mode}>{mode}</th>
+              ))}
+              <th>Best</th>
+            </tr>
+          </thead>
+          <tbody>
+            {groups.map((group, i) => {
+              let bestScore = -1;
+              let bestMode = '';
+              group.results.forEach((r) => {
+                if (r.score && r.score.score > bestScore) {
+                  bestScore = r.score.score;
+                  bestMode = r.grayscaleMode ?? '';
+                }
+              });
+
+              return (
+                <tr key={i}>
+                  <td>{group.name}</td>
+                  {group.results.map((r, j) => {
+                    const score = r.score?.score ?? 0;
+                    const isValid = r.score?.isValid ?? false;
+                    const isBest = r.grayscaleMode === bestMode;
+                    return (
+                      <td
+                        key={j}
+                        style={{
+                          color: isValid ? '#2ed573' : score > 0.3 ? '#ffa502' : '#ff4757',
+                          fontWeight: isBest ? 700 : 400,
+                          background: isBest ? 'rgba(46, 213, 115, 0.08)' : undefined,
+                        }}
+                      >
+                        {(score * 100).toFixed(0)}%
+                      </td>
+                    );
+                  })}
+                  <td style={{ fontWeight: 600, color: '#2ed573' }}>{bestMode}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
@@ -233,8 +243,9 @@ export default function DebugOcrPage() {
   const [ocrReady, setOcrReady] = useState(false);
   const [progress, setProgress] = useState('');
   const [isRunning, setIsRunning] = useState(false);
-  const [results, setResults] = useState<TestResult[]>([]);
+  const [groups, setGroups] = useState<ImageGroup[]>([]);
   const [uploadedImages, setUploadedImages] = useState<{ name: string; blob: Blob }[]>([]);
+  const [statusText, setStatusText] = useState('');
 
   useEffect(() => {
     setOcrProgressCallback((status, prog) => {
@@ -247,50 +258,133 @@ export default function DebugOcrPage() {
     return () => setOcrProgressCallback(null);
   }, []);
 
-  const handleFileUpload = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = e.target.files;
-      if (!files) return;
-      const newImages = Array.from(files).map((f) => ({
-        name: f.name,
-        blob: f as Blob,
-      }));
-      setUploadedImages((prev) => [...prev, ...newImages]);
-      // Reset input
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    },
-    [],
-  );
+  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    const newImages = Array.from(files).map((f) => ({ name: f.name, blob: f as Blob }));
+    setUploadedImages((prev) => [...prev, ...newImages]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, []);
 
-  const runAll = useCallback(async () => {
+  // Run all images through all 5 grayscale modes
+  const runAllModes = useCallback(async () => {
     if (uploadedImages.length === 0 || isRunning) return;
     setIsRunning(true);
 
-    // Initialize results as pending
-    const initial: TestResult[] = uploadedImages.map((img, i) => ({
+    const newGroups: ImageGroup[] = uploadedImages.map((img, i) => ({
       name: `Label ${i + 1}`,
-      description: img.name,
-      status: 'pending' as const,
+      fileName: img.name,
+      blob: img.blob,
+      results: ALL_MODES.map((mode) => ({
+        name: `Label ${i + 1}`,
+        description: `${img.name} (${mode})`,
+        status: 'pending' as const,
+        grayscaleMode: mode,
+      })),
     }));
-    setResults(initial);
+    setGroups(newGroups);
 
-    // Process each sequentially
     for (let i = 0; i < uploadedImages.length; i++) {
-      // Mark as running
-      setResults((prev) =>
-        prev.map((r, j) => (j === i ? { ...r, status: 'running' as const } : r)),
-      );
-
       const img = uploadedImages[i];
-      const result = await processImage(
-        img.blob,
-        `Label ${i + 1}`,
-        img.name,
-      );
 
-      setResults((prev) => prev.map((r, j) => (j === i ? result : r)));
+      for (let m = 0; m < ALL_MODES.length; m++) {
+        const mode = ALL_MODES[m];
+        setStatusText(`Processing Label ${i + 1} / ${mode} channel...`);
+
+        // Mark as running
+        setGroups((prev) =>
+          prev.map((g, gi) =>
+            gi === i
+              ? {
+                  ...g,
+                  results: g.results.map((r, ri) =>
+                    ri === m ? { ...r, status: 'running' as const } : r,
+                  ),
+                }
+              : g,
+          ),
+        );
+
+        const result = await processImage(
+          img.blob,
+          `Label ${i + 1}`,
+          `${img.name} (${mode})`,
+          { grayscaleMode: mode },
+        );
+
+        setGroups((prev) =>
+          prev.map((g, gi) =>
+            gi === i
+              ? {
+                  ...g,
+                  results: g.results.map((r, ri) => (ri === m ? result : r)),
+                }
+              : g,
+          ),
+        );
+      }
+
+      // Determine best mode for this image
+      setGroups((prev) =>
+        prev.map((g, gi) => {
+          if (gi !== i) return g;
+          let bestScore = -1;
+          let bestMode = '';
+          g.results.forEach((r) => {
+            if (r.score && r.score.score > bestScore) {
+              bestScore = r.score.score;
+              bestMode = r.grayscaleMode ?? '';
+            }
+          });
+          return { ...g, bestMode };
+        }),
+      );
     }
 
+    setStatusText('');
+    setIsRunning(false);
+  }, [uploadedImages, isRunning]);
+
+  // Quick run: just standard luma mode
+  const runQuick = useCallback(async () => {
+    if (uploadedImages.length === 0 || isRunning) return;
+    setIsRunning(true);
+
+    const newGroups: ImageGroup[] = uploadedImages.map((img, i) => ({
+      name: `Label ${i + 1}`,
+      fileName: img.name,
+      blob: img.blob,
+      results: [
+        {
+          name: `Label ${i + 1}`,
+          description: `${img.name} (luma)`,
+          status: 'pending' as const,
+          grayscaleMode: 'luma',
+        },
+      ],
+    }));
+    setGroups(newGroups);
+
+    for (let i = 0; i < uploadedImages.length; i++) {
+      const img = uploadedImages[i];
+      setStatusText(`Processing Label ${i + 1}...`);
+
+      setGroups((prev) =>
+        prev.map((g, gi) =>
+          gi === i
+            ? { ...g, results: g.results.map((r) => ({ ...r, status: 'running' as const })) }
+            : g,
+        ),
+      );
+
+      const result = await processImage(img.blob, `Label ${i + 1}`, `${img.name} (luma)`);
+
+      setGroups((prev) =>
+        prev.map((g, gi) => (gi === i ? { ...g, results: [result] } : g)),
+      );
+    }
+
+    setStatusText('');
     setIsRunning(false);
   }, [uploadedImages, isRunning]);
 
@@ -321,17 +415,25 @@ export default function DebugOcrPage() {
         </button>
         <button
           className={styles.runButton}
-          onClick={runAll}
+          onClick={runQuick}
           disabled={!ocrReady || isRunning || uploadedImages.length === 0}
         >
-          {isRunning ? 'Processing...' : `Run All (${uploadedImages.length})`}
+          {isRunning ? 'Processing...' : 'Quick Run'}
+        </button>
+        <button
+          className={styles.runButton}
+          onClick={runAllModes}
+          disabled={!ocrReady || isRunning || uploadedImages.length === 0}
+          style={{ background: '#6c5ce7' }}
+        >
+          All Modes (5x)
         </button>
         {uploadedImages.length > 0 && !isRunning && (
           <button
             className={styles.uploadLabel}
             onClick={() => {
               setUploadedImages([]);
-              setResults([]);
+              setGroups([]);
             }}
           >
             Clear
@@ -339,8 +441,14 @@ export default function DebugOcrPage() {
         )}
       </div>
 
+      {statusText && (
+        <p className={styles.subtitle} style={{ marginTop: -10, marginBottom: 16 }}>
+          {statusText}
+        </p>
+      )}
+
       {/* Uploaded image previews before running */}
-      {uploadedImages.length > 0 && results.length === 0 && (
+      {uploadedImages.length > 0 && groups.length === 0 && (
         <div style={{ marginBottom: 16 }}>
           {uploadedImages.map((img, i) => (
             <div key={i} className={styles.labelCard}>
@@ -356,9 +464,39 @@ export default function DebugOcrPage() {
         </div>
       )}
 
-      {/* Results */}
-      {results.map((result, i) => (
-        <ResultCard key={i} result={result} />
+      {/* Score matrix (only for multi-mode runs) */}
+      {groups.length > 0 && groups[0].results.length > 1 && (
+        <ScoreMatrix groups={groups} />
+      )}
+
+      {/* Results grouped by image */}
+      {groups.map((group, gi) => (
+        <div key={gi}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0 8px' }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+              {group.name}
+            </h2>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{group.fileName}</span>
+            {group.bestMode && (
+              <span className={styles.modeTag}>best: {group.bestMode}</span>
+            )}
+          </div>
+
+          {/* Show original image once per group */}
+          {group.results[0]?.originalUrl && (
+            <div className={styles.labelCard} style={{ padding: 8 }}>
+              <img
+                src={group.results[0].originalUrl}
+                alt="Original"
+                style={{ width: '100%', maxHeight: 200, objectFit: 'contain', borderRadius: 8, background: '#111' }}
+              />
+            </div>
+          )}
+
+          {group.results.map((result, ri) => (
+            <ResultCard key={ri} result={result} isBest={result.grayscaleMode === group.bestMode && group.results.length > 1} />
+          ))}
+        </div>
       ))}
     </div>
   );
