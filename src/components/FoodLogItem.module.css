@@ -9,6 +9,13 @@
   border-bottom: none;
 }
 
+.time {
+  font-size: 13px;
+  color: var(--text-secondary);
+  min-width: 62px;
+  flex-shrink: 0;
+}
+
 .info {
   flex: 1;
   display: flex;

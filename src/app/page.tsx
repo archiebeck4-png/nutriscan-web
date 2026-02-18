@@ -129,14 +129,16 @@ export default function DashboardPage() {
               message="Tap + to add your first meal"
             />
           ) : (
-            entries.map((entry) => (
-              <FoodLogItem
-                key={entry.id}
-                entry={entry}
-                onDelete={handleDelete}
-                energyUnit={eu}
-              />
-            ))
+            [...entries]
+              .sort((a, b) => (a.loggedAt ?? a.createdAt).localeCompare(b.loggedAt ?? b.createdAt))
+              .map((entry) => (
+                <FoodLogItem
+                  key={entry.id}
+                  entry={entry}
+                  onDelete={handleDelete}
+                  energyUnit={eu}
+                />
+              ))
           )}
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import type { FoodLogEntry, EnergyUnit } from '../models/types';
 import { kjToDisplay, energyLabel } from '../lib/units';
+import { formatTimeDisplay } from '../lib/dates';
 import styles from './FoodLogItem.module.css';
 
 interface FoodLogItemProps {
@@ -13,6 +14,9 @@ interface FoodLogItemProps {
 export default function FoodLogItem({ entry, onDelete, energyUnit = 'kj' }: FoodLogItemProps) {
   return (
     <div className={styles.item}>
+      {entry.loggedAt && (
+        <span className={styles.time}>{formatTimeDisplay(entry.loggedAt)}</span>
+      )}
       <div className={styles.info}>
         <span className={styles.name}>{entry.foodName}</span>
         <span className={styles.macros}>
