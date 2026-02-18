@@ -44,6 +44,7 @@ export interface FoodLogEntry {
   id: string;
   date: string; // YYYY-MM-DD
   createdAt: string; // ISO timestamp
+  loggedAt: string; // HH:MM (24h) — the time the user says they ate
   foodName: string;
 
   energyKj: number;

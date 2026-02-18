@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useScanData } from '../../../context/ScanContext';
 import { insertEntry, addFoodLogEntry, cacheBarcode } from '../../../lib/db';
 import { saveToSharedCache } from '../../../lib/barcodeApi';
-import { todayDateString } from '../../../lib/dates';
+import { todayDateString, currentTimeString } from '../../../lib/dates';
 import { parseServingSizeGrams, derivePerServingFrom100g } from '../../../lib/nutritionUtils';
 import type { ScannedNutrition, WebFoodEntry, FoodLogEntry } from '../../../models/types';
 import NutrientField from '../../../components/NutrientField';
@@ -41,10 +41,8 @@ export default function ReviewPage() {
       rawText: '',
     }
   );
-  const [quantityMode, setQuantityMode] = useState<'servings' | 'grams'>('servings');
   const [servingsConsumed, setServingsConsumed] = useState('1');
-  const [gramsConsumed, setGramsConsumed] = useState('');
-  const [showRawText, setShowRawText] = useState(false);
+  const [logTime, setLogTime] = useState(currentTimeString());
   const [isSaving, setIsSaving] = useState(false);
 
   // Auto-derive per-serving values from per-100g when user enters a serving size
@@ -109,22 +107,6 @@ export default function ReviewPage() {
     return isNaN(num) ? null : num;
   };
 
-  // Check if grams mode is possible
-  const hasAnyPer100g = !!(
-    nutrition.energyPer100g || nutrition.proteinPer100g ||
-    nutrition.fatPer100g || nutrition.carbsPer100g
-  );
-  const canDeriveFromServing = !!parseServingSizeGrams(nutrition.servingSize);
-  const canUseGramsMode = hasAnyPer100g || canDeriveFromServing;
-
-  // Get effective per100g value (from data or derived)
-  const getEffectivePer100g = (per100g: string, perServing: string): number | null => {
-    const direct = parseNum(per100g);
-    if (direct != null) return direct;
-    const derived = derivePer100g(perServing, nutrition.servingSize);
-    return parseNum(derived);
-  };
-
   const handleSave = async () => {
     if (isSaving) return;
     setIsSaving(true);
@@ -157,29 +139,18 @@ export default function ReviewPage() {
       await insertEntry(entry);
 
       // 2. Add to today's food log
-      let energyKj: number, proteinG: number, fatG: number, carbsG: number, fiberG: number;
-
-      if (quantityMode === 'grams') {
-        const grams = parseFloat(gramsConsumed) || 0;
-        const factor = grams / 100;
-        energyKj = (getEffectivePer100g(nutrition.energyPer100g, nutrition.energyPerServing) ?? 0) * factor;
-        proteinG = (getEffectivePer100g(nutrition.proteinPer100g, nutrition.proteinPerServing) ?? 0) * factor;
-        fatG = (getEffectivePer100g(nutrition.fatPer100g, nutrition.fatPerServing) ?? 0) * factor;
-        carbsG = (getEffectivePer100g(nutrition.carbsPer100g, nutrition.carbsPerServing) ?? 0) * factor;
-        fiberG = (getEffectivePer100g(nutrition.fiberPer100g, nutrition.fiberPerServing) ?? 0) * factor;
-      } else {
-        const qty = parseFloat(servingsConsumed) || 1;
-        energyKj = (parseNum(nutrition.energyPerServing) ?? 0) * qty;
-        proteinG = (parseNum(nutrition.proteinPerServing) ?? 0) * qty;
-        fatG = (parseNum(nutrition.fatPerServing) ?? 0) * qty;
-        carbsG = (parseNum(nutrition.carbsPerServing) ?? 0) * qty;
-        fiberG = (parseNum(nutrition.fiberPerServing) ?? 0) * qty;
-      }
+      const qty = parseFloat(servingsConsumed) || 1;
+      const energyKj = (parseNum(nutrition.energyPerServing) ?? 0) * qty;
+      const proteinG = (parseNum(nutrition.proteinPerServing) ?? 0) * qty;
+      const fatG = (parseNum(nutrition.fatPerServing) ?? 0) * qty;
+      const carbsG = (parseNum(nutrition.carbsPerServing) ?? 0) * qty;
+      const fiberG = (parseNum(nutrition.fiberPerServing) ?? 0) * qty;
 
       const logEntry: FoodLogEntry = {
         id: crypto.randomUUID(),
         date: todayDateString(),
         createdAt: new Date().toISOString(),
+        loggedAt: logTime,
         foodName,
         energyKj,
         proteinG,
@@ -281,55 +252,25 @@ export default function ReviewPage() {
               inputMode="decimal"
             />
           </div>
-          {/* Quantity mode toggle */}
           <div className={styles.textFieldRow}>
-            <label className={styles.fieldLabel}>Log by</label>
-            <div className={styles.segmentedControl}>
-              <button
-                className={`${styles.segmentButton} ${quantityMode === 'servings' ? styles.segmentActive : ''}`}
-                onClick={() => setQuantityMode('servings')}
-                type="button"
-              >
-                Servings
-              </button>
-              <button
-                className={`${styles.segmentButton} ${quantityMode === 'grams' ? styles.segmentActive : ''}`}
-                onClick={() => canUseGramsMode && setQuantityMode('grams')}
-                disabled={!canUseGramsMode}
-                type="button"
-              >
-                Grams
-              </button>
-            </div>
+            <label className={styles.fieldLabel}>Servings eaten</label>
+            <input
+              className={styles.textInput}
+              value={servingsConsumed}
+              onChange={(e) => setServingsConsumed(e.target.value)}
+              placeholder="1"
+              inputMode="decimal"
+            />
           </div>
-          {quantityMode === 'servings' ? (
-            <div className={styles.textFieldRow}>
-              <label className={styles.fieldLabel}>Servings eaten</label>
-              <input
-                className={styles.textInput}
-                value={servingsConsumed}
-                onChange={(e) => setServingsConsumed(e.target.value)}
-                placeholder="1"
-                inputMode="decimal"
-              />
-            </div>
-          ) : (
-            <div className={styles.textFieldRow}>
-              <label className={styles.fieldLabel}>Grams eaten</label>
-              <input
-                className={styles.textInput}
-                value={gramsConsumed}
-                onChange={(e) => setGramsConsumed(e.target.value)}
-                placeholder="e.g. 150"
-                inputMode="decimal"
-              />
-            </div>
-          )}
-          {quantityMode === 'grams' && nutrition.servingSize && (
-            <div className={styles.servingRef}>
-              1 serving = {nutrition.servingSize}
-            </div>
-          )}
+          <div className={styles.textFieldRow}>
+            <label className={styles.fieldLabel}>Time</label>
+            <input
+              type="time"
+              className={styles.timeInput}
+              value={logTime}
+              onChange={(e) => setLogTime(e.target.value)}
+            />
+          </div>
         </div>
 
         {/* Per Serving */}
@@ -341,24 +282,6 @@ export default function ReviewPage() {
           <NutrientField label="Carbs (g)" value={nutrition.carbsPerServing} onChange={(v) => updateField('carbsPerServing', v)} />
           <NutrientField label="Fiber (g)" value={nutrition.fiberPerServing} onChange={(v) => updateField('fiberPerServing', v)} />
         </div>
-
-        {/* Raw OCR Text */}
-        {nutrition.rawText && (
-          <>
-            <button
-              className="sectionHeader"
-              style={{ cursor: 'pointer', background: 'none', border: 'none', width: '100%', textAlign: 'left', color: 'inherit' }}
-              onClick={() => setShowRawText((prev) => !prev)}
-            >
-              RAW OCR TEXT {showRawText ? '▼' : '▶'}
-            </button>
-            {showRawText && (
-              <div className="section">
-                <pre className={styles.rawText}>{nutrition.rawText}</pre>
-              </div>
-            )}
-          </>
-        )}
 
         <div style={{ height: 40 }} />
       </div>

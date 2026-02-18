@@ -77,6 +77,16 @@
   color: var(--text-tertiary);
 }
 
+.timeInput {
+  font-size: 16px;
+  color: var(--text-primary);
+  text-align: right;
+  border: none;
+  background: transparent;
+  outline: none;
+  color-scheme: dark;
+}
+
 .barcodeTag {
   display: flex;
   align-items: center;

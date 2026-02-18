@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { addFoodLogEntry, cacheBarcode } from '../../../lib/db';
 import { saveToSharedCache } from '../../../lib/barcodeApi';
-import { todayDateString } from '../../../lib/dates';
+import { todayDateString, currentTimeString } from '../../../lib/dates';
 import { useProfile } from '../../../context/ProfileContext';
 import { useScanData } from '../../../context/ScanContext';
 import { energyLabel, displayToKj } from '../../../lib/units';
@@ -24,6 +24,7 @@ export default function ManualEntryPage() {
   const [fat, setFat] = useState('');
   const [carbs, setCarbs] = useState('');
   const [fiber, setFiber] = useState('');
+  const [logTime, setLogTime] = useState(currentTimeString());
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
@@ -40,6 +41,7 @@ export default function ManualEntryPage() {
         id: crypto.randomUUID(),
         date: todayDateString(),
         createdAt: new Date().toISOString(),
+        loggedAt: logTime,
         foodName: name,
         energyKj,
         proteinG: parseFloat(protein) || 0,
@@ -133,6 +135,19 @@ export default function ManualEntryPage() {
               value={foodName}
               onChange={(e) => setFoodName(e.target.value)}
               placeholder="e.g. Chicken breast"
+            />
+          </div>
+        </div>
+
+        <div className="sectionHeader">TIME</div>
+        <div className="section">
+          <div className={styles.textFieldRow}>
+            <label className={styles.fieldLabel}>Time</label>
+            <input
+              type="time"
+              className={styles.timeInput}
+              value={logTime}
+              onChange={(e) => setLogTime(e.target.value)}
             />
           </div>
         </div>

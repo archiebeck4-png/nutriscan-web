@@ -55,6 +55,21 @@ db.version(5).stores({
   });
 });
 
+// Version 6: add loggedAt to food log entries
+db.version(6).stores({
+  entries: 'id, dateScanned',
+  foodLog: 'id, date, createdAt',
+  profile: 'id',
+  barcodeCache: 'barcode, cachedAt',
+}).upgrade((tx) => {
+  return tx.table('foodLog').toCollection().modify((entry) => {
+    if (!entry.loggedAt && entry.createdAt) {
+      const d = new Date(entry.createdAt);
+      entry.loggedAt = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+  });
+});
+
 export { db };
 
 // --- Saved food entries (existing) ---

@@ -39,3 +39,21 @@ export function addDays(dateStr: string, days: number): string {
 export function isToday(dateStr: string): boolean {
   return dateStr === todayDateString();
 }
+
+/**
+ * Get the current time as HH:MM (24-hour).
+ */
+export function currentTimeString(): string {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/**
+ * Format HH:MM (24h) to a display string like "2:30 pm".
+ */
+export function formatTimeDisplay(time: string): string {
+  const [h, m] = time.split(':').map(Number);
+  const period = h >= 12 ? 'pm' : 'am';
+  const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${displayHour}:${String(m).padStart(2, '0')} ${period}`;
+}

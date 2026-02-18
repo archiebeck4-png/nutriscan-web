@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, addFoodLogEntry, deleteEntry } from '../../../lib/db';
-import { todayDateString } from '../../../lib/dates';
+import { todayDateString, currentTimeString } from '../../../lib/dates';
 import { useProfile } from '../../../context/ProfileContext';
 import { kjToDisplay, energyLabel } from '../../../lib/units';
 import { derivePer100gFromServing } from '../../../lib/nutritionUtils';
@@ -60,6 +60,7 @@ export default function LibraryPage() {
       id: crypto.randomUUID(),
       date: todayDateString(),
       createdAt: new Date().toISOString(),
+      loggedAt: currentTimeString(),
       foodName: entry.foodName,
       energyKj,
       proteinG,

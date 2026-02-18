@@ -58,6 +58,13 @@
   border-bottom: none;
 }
 
+.logTime {
+  font-size: 13px;
+  color: var(--text-secondary);
+  min-width: 62px;
+  flex-shrink: 0;
+}
+
 .logInfo {
   flex: 1;
   display: flex;

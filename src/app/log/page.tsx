@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, deleteFoodLogEntry, deleteEntry } from '../../lib/db';
-import { formatDateDisplay } from '../../lib/dates';
+import { formatDateDisplay, formatTimeDisplay } from '../../lib/dates';
 import { useProfile } from '../../context/ProfileContext';
 import { kjToDisplay, energyLabel } from '../../lib/units';
 import type { FoodLogEntry } from '../../models/types';
@@ -87,8 +87,13 @@ export default function LogPage() {
                   {formatDateDisplay(date).toUpperCase()}
                 </div>
                 <div className="section">
-                  {grouped[date].map((entry) => (
+                  {[...grouped[date]]
+                    .sort((a, b) => (a.loggedAt ?? a.createdAt).localeCompare(b.loggedAt ?? b.createdAt))
+                    .map((entry) => (
                     <div key={entry.id} className={styles.logRow}>
+                      <span className={styles.logTime}>
+                        {entry.loggedAt ? formatTimeDisplay(entry.loggedAt) : ''}
+                      </span>
                       <div className={styles.logInfo}>
                         <span className={styles.logName}>{entry.foodName}</span>
                         <span className={styles.logMeta}>
