@@ -50,6 +50,8 @@ export default function DashboardPage() {
 
   return (
     <div className={styles.container}>
+      <h1 className={styles.appTitle}>ScaleShift</h1>
+
       {/* Date navigation */}
       <div className={styles.dateNav}>
         <button

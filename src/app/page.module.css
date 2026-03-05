@@ -3,6 +3,14 @@
   padding-top: max(16px, env(safe-area-inset-top, 0px));
 }
 
+.appTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+  margin: 8px 0 0 0;
+}
+
 /* Date navigation */
 .dateNav {
   display: flex;
