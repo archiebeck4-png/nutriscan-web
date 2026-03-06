@@ -43,6 +43,8 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
       setSession(s);
       setUser(s?.user ?? null);
       setIsLoading(false);
+    }).catch(() => {
+      setIsLoading(false);
     });
 
     const {
@@ -57,17 +59,25 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     if (!supabase) return { error: 'Auth not configured' };
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return { error: error?.message ?? null };
+    } catch {
+      return { error: 'Unable to connect. Check your internet connection.' };
+    }
   };
 
   const signUp = async (email: string, password: string) => {
     if (!supabase) return { error: 'Auth not configured', needsConfirmation: false };
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) return { error: error.message, needsConfirmation: false };
-    // If user exists but session is null, email confirmation is required
-    const needsConfirmation = !!data.user && !data.session;
-    return { error: null, needsConfirmation };
+    try {
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) return { error: error.message, needsConfirmation: false };
+      // If user exists but session is null, email confirmation is required
+      const needsConfirmation = !!data.user && !data.session;
+      return { error: null, needsConfirmation };
+    } catch {
+      return { error: 'Unable to connect. Check your internet connection.', needsConfirmation: false };
+    }
   };
 
   const signOut = async () => {
