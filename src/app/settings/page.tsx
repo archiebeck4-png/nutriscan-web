@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useProfile } from '../../context/ProfileContext';
+import { useAuth } from '../../context/AuthContext';
 import { calculateDailyTargets, intensityToGoal, goalToIntensity } from '../../lib/macros';
 import { deleteAllFoodLog, deleteAllEntries } from '../../lib/db';
 import type { ActivityLevel, Gender, EnergyUnit, WeightUnit } from '../../models/types';
@@ -21,6 +22,7 @@ const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
 export default function SettingsPage() {
   const router = useRouter();
   const { profile, setProfile } = useProfile();
+  const { user, signOut } = useAuth();
   const [editing, setEditing] = useState(false);
 
   // Editable form state
@@ -340,6 +342,21 @@ export default function SettingsPage() {
           <span className={styles.value}>1.0.0</span>
         </div>
       </div>
+
+      {user && (
+        <>
+          <div className="sectionHeader">ACCOUNT</div>
+          <div className="section">
+            <div className={styles.row}>
+              <span className={styles.label}>Email</span>
+              <span className={styles.value}>{user.email}</span>
+            </div>
+            <button className={styles.dangerRow} onClick={signOut}>
+              Sign Out
+            </button>
+          </div>
+        </>
+      )}
 
       <div style={{ height: 40 }} />
     </div>

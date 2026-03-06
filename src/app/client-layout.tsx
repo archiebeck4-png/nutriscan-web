@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { ScanContextProvider } from '../context/ScanContext';
 import { ProfileContextProvider, useProfile } from '../context/ProfileContext';
+import { AuthContextProvider, useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import BottomNav from '../components/BottomNav';
 
 export default function ClientLayout({
@@ -12,26 +14,48 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ProfileContextProvider>
-      <ScanContextProvider>
-        <LayoutGate>{children}</LayoutGate>
-      </ScanContextProvider>
-    </ProfileContextProvider>
+    <AuthContextProvider>
+      <ProfileContextProvider>
+        <ScanContextProvider>
+          <LayoutGate>{children}</LayoutGate>
+        </ScanContextProvider>
+      </ProfileContextProvider>
+    </AuthContextProvider>
   );
 }
 
 function LayoutGate({ children }: { children: React.ReactNode }) {
-  const { profile, isLoading } = useProfile();
+  const { user, isLoading: authLoading } = useAuth();
+  const { profile, isLoading: profileLoading } = useProfile();
   const pathname = usePathname();
   const router = useRouter();
+  const isLogin = pathname.startsWith('/login');
   const isOnboarding = pathname.startsWith('/onboarding');
   const isDebug = pathname.startsWith('/debug');
 
+  const isLoading = authLoading || profileLoading;
+  const authEnabled = !!supabase;
+
   useEffect(() => {
-    if (!isLoading && !profile && !isOnboarding && !isDebug) {
+    if (isLoading) return;
+
+    // Auth gate: if Supabase is configured and no user, redirect to login
+    if (authEnabled && !user && !isLogin) {
+      router.replace('/login');
+      return;
+    }
+
+    // If authenticated (or no auth) and on login page, redirect away
+    if (isLogin && (!authEnabled || user)) {
+      router.replace(profile ? '/' : '/onboarding');
+      return;
+    }
+
+    // Profile gate: no profile → onboarding
+    if (!profile && !isOnboarding && !isDebug && !isLogin) {
       router.replace('/onboarding');
     }
-  }, [isLoading, profile, isOnboarding, isDebug, router]);
+  }, [isLoading, authEnabled, user, profile, isLogin, isOnboarding, isDebug, router]);
 
   if (isLoading) {
     return (
@@ -49,9 +73,19 @@ function LayoutGate({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Login page — no wrapper, no bottom nav
+  if (isLogin) {
+    return <>{children}</>;
+  }
+
   // On onboarding or debug pages — no bottom nav
   if (isOnboarding || isDebug) {
     return <div className="page">{children}</div>;
+  }
+
+  // Auth required but no user — will redirect via useEffect
+  if (authEnabled && !user) {
+    return null;
   }
 
   // No profile and not on onboarding — will redirect via useEffect
