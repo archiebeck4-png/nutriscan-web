@@ -109,4 +109,14 @@ export interface WebFoodEntry {
 
   rawOcrText: string | null;
   imageBlob: Blob | null;
+
+  isRecipe?: boolean;
+}
+
+// --- Recipe ingredient (links a recipe to its library items) ---
+export interface RecipeIngredient {
+  id: string;
+  recipeId: string;
+  foodEntryId: string;
+  servings: number;
 }

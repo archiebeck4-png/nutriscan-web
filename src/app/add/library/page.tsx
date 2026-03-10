@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, addFoodLogEntry, deleteEntry } from '../../../lib/db';
@@ -25,7 +25,19 @@ export default function LibraryPage() {
     () => db.entries.orderBy('dateScanned').reverse().toArray()
   );
 
-  const filtered = allEntries?.filter((e) =>
+  // Deduplicate by food name (keep most recent, already sorted desc)
+  const deduplicated = useMemo(() => {
+    if (!allEntries) return undefined;
+    const seen = new Set<string>();
+    return allEntries.filter((e) => {
+      const key = e.foodName.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [allEntries]);
+
+  const filtered = deduplicated?.filter((e) =>
     e.foodName.toLowerCase().includes(search.toLowerCase())
   );
 

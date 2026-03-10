@@ -1,11 +1,12 @@
 import Dexie, { type EntityTable } from 'dexie';
-import { WebFoodEntry, FoodLogEntry, UserProfile, BarcodeCacheEntry, ScannedNutrition } from '../models/types';
+import { WebFoodEntry, FoodLogEntry, UserProfile, BarcodeCacheEntry, ScannedNutrition, RecipeIngredient } from '../models/types';
 
 const db = new Dexie('NutriScanDB') as Dexie & {
   entries: EntityTable<WebFoodEntry, 'id'>;
   foodLog: EntityTable<FoodLogEntry, 'id'>;
   profile: EntityTable<UserProfile, 'id'>;
   barcodeCache: EntityTable<BarcodeCacheEntry, 'barcode'>;
+  recipeIngredients: EntityTable<RecipeIngredient, 'id'>;
 };
 
 // Version 1: original schema (preserved for backward compat)
@@ -68,6 +69,15 @@ db.version(6).stores({
       entry.loggedAt = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     }
   });
+});
+
+// Version 7: add recipe ingredients table
+db.version(7).stores({
+  entries: 'id, dateScanned',
+  foodLog: 'id, date, createdAt',
+  profile: 'id',
+  barcodeCache: 'barcode, cachedAt',
+  recipeIngredients: 'id, recipeId, foodEntryId',
 });
 
 export { db };
@@ -145,4 +155,18 @@ export async function cacheBarcode(
     nutrition,
     cachedAt: new Date().toISOString(),
   });
+}
+
+// --- Recipe ingredients ---
+
+export async function saveRecipeIngredients(ingredients: RecipeIngredient[]): Promise<void> {
+  await db.recipeIngredients.bulkAdd(ingredients);
+}
+
+export async function getRecipeIngredients(recipeId: string): Promise<RecipeIngredient[]> {
+  return db.recipeIngredients.where('recipeId').equals(recipeId).toArray();
+}
+
+export async function deleteRecipeIngredients(recipeId: string): Promise<void> {
+  await db.recipeIngredients.where('recipeId').equals(recipeId).delete();
 }

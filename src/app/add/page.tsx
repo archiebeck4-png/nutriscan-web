@@ -52,6 +52,20 @@ export default function AddFoodPage() {
           </div>
           <span className={styles.chevron}>›</span>
         </button>
+
+        <button
+          className={styles.card}
+          onClick={() => router.push('/add/recipe')}
+        >
+          <span className={styles.cardIcon}>🍳</span>
+          <div className={styles.cardText}>
+            <span className={styles.cardLabel}>Create Recipe</span>
+            <span className={styles.cardDesc}>
+              Combine saved foods into a recipe
+            </span>
+          </div>
+          <span className={styles.chevron}>›</span>
+        </button>
       </div>
     </div>
   );
