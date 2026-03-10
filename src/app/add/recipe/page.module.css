@@ -232,6 +232,36 @@
   flex-shrink: 0;
 }
 
+/* New ingredient options */
+.newOptions {
+  display: flex;
+  gap: 10px;
+  padding: 8px 16px;
+}
+
+.newOptionBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--card-bg);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.newOptionBtn:active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
 /* Totals */
 .totalRow {
   display: flex;

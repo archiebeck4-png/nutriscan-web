@@ -249,6 +249,27 @@ export default function RecipePage() {
           )}
         </div>
 
+        {/* Add new ingredient */}
+        <div className="sectionHeader">OR ADD NEW</div>
+        <div className={styles.newOptions}>
+          <button
+            className={styles.newOptionBtn}
+            onClick={() => router.push('/add/scan')}
+            type="button"
+          >
+            <span>📷</span>
+            <span>Scan a Label</span>
+          </button>
+          <button
+            className={styles.newOptionBtn}
+            onClick={() => router.push('/add/manual')}
+            type="button"
+          >
+            <span>✏️</span>
+            <span>Manual Entry</span>
+          </button>
+        </div>
+
         {/* Nutrition totals */}
         {ingredients.length > 0 && (
           <>
