@@ -187,4 +187,5 @@ When only per-100g data exists (common from barcode APIs), the review page auto-
 - **Remote:** GitHub (archiebeck4-png/nutriscan-web)
 - **Deploy:** Vercel auto-deploys on push to master
 - Always run `npm run build` before committing to catch TypeScript errors
+- Always push to master after committing so changes go live on Vercel
 - Commit messages: imperative tense, concise summary of changes

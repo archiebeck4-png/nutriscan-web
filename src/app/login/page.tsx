@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import styles from './page.module.css';
 
 export default function LoginPage() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, skipAuth } = useAuth();
   const [tab, setTab] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -86,6 +86,10 @@ export default function LoginPage() {
             {loading ? 'Loading...' : tab === 'login' ? 'Log In' : 'Sign Up'}
           </button>
         </form>
+
+        <button className={styles.guest} onClick={skipAuth}>
+          Continue as Guest
+        </button>
       </div>
     </div>
   );

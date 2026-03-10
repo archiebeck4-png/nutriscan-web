@@ -25,7 +25,7 @@ export default function ClientLayout({
 }
 
 function LayoutGate({ children }: { children: React.ReactNode }) {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isGuest, isLoading: authLoading } = useAuth();
   const { profile, isLoading: profileLoading } = useProfile();
   const pathname = usePathname();
   const router = useRouter();
@@ -39,14 +39,14 @@ function LayoutGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
 
-    // Auth gate: if Supabase is configured and no user, redirect to login
-    if (authEnabled && !user && !isLogin) {
+    // Auth gate: if Supabase is configured and no user/guest, redirect to login
+    if (authEnabled && !user && !isGuest && !isLogin) {
       router.replace('/login');
       return;
     }
 
-    // If authenticated (or no auth) and on login page, redirect away
-    if (isLogin && (!authEnabled || user)) {
+    // If authenticated (or guest or no auth) and on login page, redirect away
+    if (isLogin && (!authEnabled || user || isGuest)) {
       router.replace(profile ? '/' : '/onboarding');
       return;
     }
@@ -55,7 +55,7 @@ function LayoutGate({ children }: { children: React.ReactNode }) {
     if (!profile && !isOnboarding && !isDebug && !isLogin) {
       router.replace('/onboarding');
     }
-  }, [isLoading, authEnabled, user, profile, isLogin, isOnboarding, isDebug, router]);
+  }, [isLoading, authEnabled, user, isGuest, profile, isLogin, isOnboarding, isDebug, router]);
 
   if (isLoading) {
     return (
@@ -83,8 +83,8 @@ function LayoutGate({ children }: { children: React.ReactNode }) {
     return <div className="page">{children}</div>;
   }
 
-  // Auth required but no user — will redirect via useEffect
-  if (authEnabled && !user) {
+  // Auth required but no user and not guest — will redirect via useEffect
+  if (authEnabled && !user && !isGuest) {
     return null;
   }
 

@@ -117,3 +117,22 @@
   padding: 8px 0;
   line-height: 1.4;
 }
+
+.guest {
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  margin-top: 16px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.2s;
+}
+
+.guest:active {
+  color: var(--text-primary);
+}

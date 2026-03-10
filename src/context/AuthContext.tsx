@@ -14,24 +14,29 @@ interface AuthContextValue {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  isGuest: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   signOut: () => Promise<void>;
+  skipAuth: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   session: null,
   isLoading: true,
+  isGuest: false,
   signIn: async () => ({ error: null }),
   signUp: async () => ({ error: null, needsConfirmation: false }),
   signOut: async () => {},
+  skipAuth: () => {},
 });
 
 export function AuthContextProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGuest, setIsGuest] = useState(false);
 
   useEffect(() => {
     if (!supabase) {
@@ -81,12 +86,20 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    if (isGuest) {
+      setIsGuest(false);
+      return;
+    }
     if (!supabase) return;
     await supabase.auth.signOut();
   };
 
+  const skipAuth = () => {
+    setIsGuest(true);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, isLoading, isGuest, signIn, signUp, signOut, skipAuth }}>
       {children}
     </AuthContext.Provider>
   );
