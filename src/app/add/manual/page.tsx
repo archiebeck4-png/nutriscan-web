@@ -1,24 +1,35 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { addFoodLogEntry, cacheBarcode } from '../../../lib/db';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { addFoodLogEntry, insertEntry, cacheBarcode } from '../../../lib/db';
 import { saveToSharedCache } from '../../../lib/barcodeApi';
 import { todayDateString, currentTimeString } from '../../../lib/dates';
 import { useProfile } from '../../../context/ProfileContext';
 import { useScanData } from '../../../context/ScanContext';
 import { energyLabel, displayToKj } from '../../../lib/units';
-import type { FoodLogEntry, ScannedNutrition } from '../../../models/types';
+import type { FoodLogEntry, ScannedNutrition, WebFoodEntry } from '../../../models/types';
 import NutrientField from '../../../components/NutrientField';
 import styles from './page.module.css';
 
 export default function ManualEntryPage() {
+  return (
+    <Suspense>
+      <ManualEntryContent />
+    </Suspense>
+  );
+}
+
+function ManualEntryContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromRecipe = searchParams.get('from') === 'recipe';
   const { profile } = useProfile();
   const { scanData, setScanData } = useScanData();
   const pendingBarcode = scanData?.barcode ?? null;
   const eu = profile?.energyUnit ?? 'kj';
   const [foodName, setFoodName] = useState('');
+  const [servingSize, setServingSize] = useState('');
   const [energy, setEnergy] = useState('');
   const [protein, setProtein] = useState('');
   const [fat, setFat] = useState('');
@@ -37,27 +48,52 @@ export default function ManualEntryPage() {
       const energyKj = displayToKj(rawEnergy, eu);
       const name = foodName.trim() || 'Unknown Food';
 
-      const entry: FoodLogEntry = {
+      // Always save to library (entries table)
+      const libraryEntry: WebFoodEntry = {
         id: crypto.randomUUID(),
-        date: todayDateString(),
-        createdAt: new Date().toISOString(),
-        loggedAt: logTime,
         foodName: name,
-        energyKj,
-        proteinG: parseFloat(protein) || 0,
-        fatG: parseFloat(fat) || 0,
-        carbsG: parseFloat(carbs) || 0,
-        fiberG: parseFloat(fiber) || 0,
-        savedFoodId: null,
-        source: pendingBarcode ? 'barcode' : 'manual',
+        dateScanned: new Date().toISOString(),
+        energyPerServing: energyKj,
+        proteinPerServing: parseFloat(protein) || 0,
+        fatPerServing: parseFloat(fat) || 0,
+        carbsPerServing: parseFloat(carbs) || 0,
+        fiberPerServing: parseFloat(fiber) || 0,
+        energyPer100g: null,
+        proteinPer100g: null,
+        fatPer100g: null,
+        carbsPer100g: null,
+        fiberPer100g: null,
+        servingSize: servingSize.trim() || null,
+        servingsPerPackage: null,
+        rawOcrText: null,
+        imageBlob: null,
       };
-      await addFoodLogEntry(entry);
+      await insertEntry(libraryEntry);
+
+      // Only log to food diary if NOT coming from recipe page
+      if (!fromRecipe) {
+        const logEntry: FoodLogEntry = {
+          id: crypto.randomUUID(),
+          date: todayDateString(),
+          createdAt: new Date().toISOString(),
+          loggedAt: logTime,
+          foodName: name,
+          energyKj,
+          proteinG: parseFloat(protein) || 0,
+          fatG: parseFloat(fat) || 0,
+          carbsG: parseFloat(carbs) || 0,
+          fiberG: parseFloat(fiber) || 0,
+          savedFoodId: libraryEntry.id,
+          source: pendingBarcode ? 'barcode' : 'manual',
+        };
+        await addFoodLogEntry(logEntry);
+      }
 
       // If this was for an unknown barcode, cache the nutrition
       if (pendingBarcode) {
         const nutritionForCache: ScannedNutrition = {
           foodName: name,
-          servingSize: '',
+          servingSize: servingSize.trim(),
           servingsPerPackage: '',
           energyPerServing: energyKj ? String(Math.round(energyKj)) : '',
           proteinPerServing: protein || '',
@@ -80,7 +116,7 @@ export default function ManualEntryPage() {
         setScanData(null);
       }
 
-      router.push('/');
+      router.push(fromRecipe ? '/add/recipe' : '/');
     } catch (error) {
       console.error('Failed to save:', error);
       alert('Failed to save. Please try again.');
@@ -91,7 +127,7 @@ export default function ManualEntryPage() {
 
   const handleCancel = () => {
     if (pendingBarcode) setScanData(null);
-    router.push('/add');
+    router.push(fromRecipe ? '/add/recipe' : '/add');
   };
 
   return (
@@ -106,7 +142,7 @@ export default function ManualEntryPage() {
           onClick={handleSave}
           disabled={isSaving}
         >
-          {isSaving ? 'Saving...' : 'Log'}
+          {isSaving ? 'Saving...' : fromRecipe ? 'Save' : 'Log'}
         </button>
       </div>
 
@@ -137,20 +173,34 @@ export default function ManualEntryPage() {
               placeholder="e.g. Chicken breast"
             />
           </div>
-        </div>
-
-        <div className="sectionHeader">TIME</div>
-        <div className="section">
           <div className={styles.textFieldRow}>
-            <label className={styles.fieldLabel}>Time</label>
+            <label className={styles.fieldLabel}>Serving Size (g)</label>
             <input
-              type="time"
-              className={styles.timeInput}
-              value={logTime}
-              onChange={(e) => setLogTime(e.target.value)}
+              className={styles.textInput}
+              value={servingSize}
+              onChange={(e) => setServingSize(e.target.value)}
+              placeholder="e.g. 100"
+              inputMode="decimal"
             />
           </div>
         </div>
+
+        {!fromRecipe && (
+          <>
+            <div className="sectionHeader">TIME</div>
+            <div className="section">
+              <div className={styles.textFieldRow}>
+                <label className={styles.fieldLabel}>Time</label>
+                <input
+                  type="time"
+                  className={styles.timeInput}
+                  value={logTime}
+                  onChange={(e) => setLogTime(e.target.value)}
+                />
+              </div>
+            </div>
+          </>
+        )}
 
         <div className="sectionHeader">NUTRITION</div>
         <div className="section">

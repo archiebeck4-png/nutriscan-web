@@ -254,7 +254,7 @@ export default function RecipePage() {
         <div className={styles.newOptions}>
           <button
             className={styles.newOptionBtn}
-            onClick={() => router.push('/add/scan')}
+            onClick={() => router.push('/add/scan?from=recipe')}
             type="button"
           >
             <span>📷</span>
@@ -262,7 +262,7 @@ export default function RecipePage() {
           </button>
           <button
             className={styles.newOptionBtn}
-            onClick={() => router.push('/add/manual')}
+            onClick={() => router.push('/add/manual?from=recipe')}
             type="button"
           >
             <span>✏️</span>
