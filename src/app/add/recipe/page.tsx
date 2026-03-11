@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, useEffect, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, insertEntry, saveRecipeIngredients } from '../../../lib/db';
 import { useProfile } from '../../../context/ProfileContext';
@@ -9,13 +9,25 @@ import { kjToDisplay, energyLabel } from '../../../lib/units';
 import type { WebFoodEntry, RecipeIngredient } from '../../../models/types';
 import styles from './page.module.css';
 
+const RECIPE_STATE_KEY = 'recipe-draft-state';
+
 interface IngredientItem {
   entry: WebFoodEntry;
   servings: number;
 }
 
 export default function RecipePage() {
+  return (
+    <Suspense>
+      <RecipePageContent />
+    </Suspense>
+  );
+}
+
+function RecipePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const newIngredientId = searchParams.get('newIngredientId');
   const { profile } = useProfile();
   const eu = profile?.energyUnit ?? 'kj';
 
@@ -24,10 +36,65 @@ export default function RecipePage() {
   const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
   const [search, setSearch] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [restoredState, setRestoredState] = useState(false);
 
   const allEntries = useLiveQuery(
     () => db.entries.orderBy('dateScanned').reverse().toArray()
   );
+
+  // Restore recipe state from sessionStorage on mount
+  useEffect(() => {
+    if (restoredState || !allEntries) return;
+    try {
+      const saved = sessionStorage.getItem(RECIPE_STATE_KEY);
+      if (saved) {
+        const state = JSON.parse(saved);
+        setRecipeName(state.recipeName ?? '');
+        setNumServings(state.numServings ?? '1');
+        // Restore ingredients by matching IDs to current DB entries
+        if (state.ingredientIds && Array.isArray(state.ingredientIds)) {
+          const restored: IngredientItem[] = [];
+          for (const item of state.ingredientIds) {
+            const entry = allEntries.find((e) => e.id === item.id);
+            if (entry) {
+              restored.push({ entry, servings: item.servings });
+            }
+          }
+          setIngredients(restored);
+        }
+        sessionStorage.removeItem(RECIPE_STATE_KEY);
+      }
+    } catch {
+      // ignore parse errors
+    }
+    setRestoredState(true);
+  }, [allEntries, restoredState]);
+
+  // Auto-add newly created ingredient from manual entry
+  useEffect(() => {
+    if (!newIngredientId || !allEntries || !restoredState) return;
+    const entry = allEntries.find((e) => e.id === newIngredientId);
+    if (entry) {
+      setIngredients((prev) => {
+        // Don't add if already present
+        if (prev.some((i) => i.entry.id === newIngredientId)) return prev;
+        return [...prev, { entry, servings: 1 }];
+      });
+    }
+    // Clear the param from the URL without navigation
+    window.history.replaceState({}, '', '/add/recipe');
+  }, [newIngredientId, allEntries, restoredState]);
+
+  // Save recipe state to sessionStorage before navigating away
+  const saveStateAndNavigate = useCallback((path: string) => {
+    const state = {
+      recipeName,
+      numServings,
+      ingredientIds: ingredients.map((i) => ({ id: i.entry.id, servings: i.servings })),
+    };
+    sessionStorage.setItem(RECIPE_STATE_KEY, JSON.stringify(state));
+    router.push(path);
+  }, [recipeName, numServings, ingredients, router]);
 
   // Deduplicate library items by food name (keep most recent)
   const libraryItems = useMemo(() => {
@@ -254,7 +321,7 @@ export default function RecipePage() {
         <div className={styles.newOptions}>
           <button
             className={styles.newOptionBtn}
-            onClick={() => router.push('/add/scan?from=recipe')}
+            onClick={() => saveStateAndNavigate('/add/scan?from=recipe')}
             type="button"
           >
             <span>📷</span>
@@ -262,7 +329,7 @@ export default function RecipePage() {
           </button>
           <button
             className={styles.newOptionBtn}
-            onClick={() => router.push('/add/manual?from=recipe')}
+            onClick={() => saveStateAndNavigate('/add/manual?from=recipe')}
             type="button"
           >
             <span>✏️</span>

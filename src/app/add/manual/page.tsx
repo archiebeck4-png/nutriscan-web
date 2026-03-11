@@ -116,7 +116,7 @@ function ManualEntryContent() {
         setScanData(null);
       }
 
-      router.push(fromRecipe ? '/add/recipe' : '/');
+      router.push(fromRecipe ? `/add/recipe?newIngredientId=${libraryEntry.id}` : '/');
     } catch (error) {
       console.error('Failed to save:', error);
       alert('Failed to save. Please try again.');
