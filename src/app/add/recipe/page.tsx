@@ -14,7 +14,7 @@ const RECIPE_STATE_KEY = 'recipe-draft-state';
 
 interface IngredientItem {
   entry: WebFoodEntry;
-  servings: number;
+  servings: string;
 }
 
 export default function RecipePage() {
@@ -59,7 +59,7 @@ function RecipePageContent() {
           for (const item of state.ingredientIds) {
             const entry = allEntries.find((e) => e.id === item.id);
             if (entry) {
-              restored.push({ entry, servings: item.servings });
+              restored.push({ entry, servings: String(item.servings) });
             }
           }
           setIngredients(restored);
@@ -80,7 +80,7 @@ function RecipePageContent() {
       setIngredients((prev) => {
         // Don't add if already present
         if (prev.some((i) => i.entry.id === newIngredientId)) return prev;
-        return [...prev, { entry, servings: 1 }];
+        return [...prev, { entry, servings: '1' }];
       });
     }
     // Clear the param from the URL without navigation
@@ -131,13 +131,16 @@ function RecipePageContent() {
 
   const totals = useMemo(() => {
     return ingredients.reduce(
-      (acc, ing) => ({
-        energy: acc.energy + (ing.entry.energyPerServing ?? 0) * ing.servings,
-        protein: acc.protein + (ing.entry.proteinPerServing ?? 0) * ing.servings,
-        fat: acc.fat + (ing.entry.fatPerServing ?? 0) * ing.servings,
-        carbs: acc.carbs + (ing.entry.carbsPerServing ?? 0) * ing.servings,
-        fiber: acc.fiber + (ing.entry.fiberPerServing ?? 0) * ing.servings,
-      }),
+      (acc, ing) => {
+        const srv = parseFloat(ing.servings) || 0;
+        return {
+          energy: acc.energy + (ing.entry.energyPerServing ?? 0) * srv,
+          protein: acc.protein + (ing.entry.proteinPerServing ?? 0) * srv,
+          fat: acc.fat + (ing.entry.fatPerServing ?? 0) * srv,
+          carbs: acc.carbs + (ing.entry.carbsPerServing ?? 0) * srv,
+          fiber: acc.fiber + (ing.entry.fiberPerServing ?? 0) * srv,
+        };
+      },
       { energy: 0, protein: 0, fat: 0, carbs: 0, fiber: 0 }
     );
   }, [ingredients]);
@@ -154,7 +157,7 @@ function RecipePageContent() {
   const canSave = recipeName.trim().length > 0 && ingredients.length > 0 && !isSaving;
 
   const addIngredient = (entry: WebFoodEntry) => {
-    setIngredients((prev) => [...prev, { entry, servings: 1 }]);
+    setIngredients((prev) => [...prev, { entry, servings: '1' }]);
     setSearch('');
   };
 
@@ -165,7 +168,7 @@ function RecipePageContent() {
   const updateServings = (id: string, value: string) => {
     setIngredients((prev) =>
       prev.map((i) =>
-        i.entry.id === id ? { ...i, servings: parseFloat(value) || 0 } : i
+        i.entry.id === id ? { ...i, servings: value } : i
       )
     );
   };
@@ -202,7 +205,7 @@ function RecipePageContent() {
         id: crypto.randomUUID(),
         recipeId,
         foodEntryId: ing.entry.id,
-        servings: ing.servings,
+        servings: parseFloat(ing.servings) || 0,
       }));
       await saveRecipeIngredients(recipeIngredients);
 
