@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useScanData } from '../../../context/ScanContext';
 import { insertEntry, addFoodLogEntry, cacheBarcode } from '../../../lib/db';
 import { saveToSharedCache } from '../../../lib/barcodeApi';
@@ -21,7 +21,17 @@ function derivePer100g(perServing: string, servingSize: string): string {
 }
 
 export default function ReviewPage() {
+  return (
+    <Suspense>
+      <ReviewPageContent />
+    </Suspense>
+  );
+}
+
+function ReviewPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromRecipe = searchParams.get('from') === 'recipe';
   const { scanData, setScanData } = useScanData();
   const [nutrition, setNutrition] = useState<ScannedNutrition>(
     scanData?.nutrition ?? {
@@ -138,29 +148,31 @@ export default function ReviewPage() {
       };
       await insertEntry(entry);
 
-      // 2. Add to today's food log
-      const qty = parseFloat(servingsConsumed) || 1;
-      const energyKj = (parseNum(nutrition.energyPerServing) ?? 0) * qty;
-      const proteinG = (parseNum(nutrition.proteinPerServing) ?? 0) * qty;
-      const fatG = (parseNum(nutrition.fatPerServing) ?? 0) * qty;
-      const carbsG = (parseNum(nutrition.carbsPerServing) ?? 0) * qty;
-      const fiberG = (parseNum(nutrition.fiberPerServing) ?? 0) * qty;
+      // 2. Add to today's food log (skip if adding to a recipe)
+      if (!fromRecipe) {
+        const qty = parseFloat(servingsConsumed) || 1;
+        const energyKj = (parseNum(nutrition.energyPerServing) ?? 0) * qty;
+        const proteinG = (parseNum(nutrition.proteinPerServing) ?? 0) * qty;
+        const fatG = (parseNum(nutrition.fatPerServing) ?? 0) * qty;
+        const carbsG = (parseNum(nutrition.carbsPerServing) ?? 0) * qty;
+        const fiberG = (parseNum(nutrition.fiberPerServing) ?? 0) * qty;
 
-      const logEntry: FoodLogEntry = {
-        id: crypto.randomUUID(),
-        date: todayDateString(),
-        createdAt: new Date().toISOString(),
-        loggedAt: logTime,
-        foodName,
-        energyKj,
-        proteinG,
-        fatG,
-        carbsG,
-        fiberG,
-        savedFoodId: entryId,
-        source: isBarcode ? 'barcode' : 'scan',
-      };
-      await addFoodLogEntry(logEntry);
+        const logEntry: FoodLogEntry = {
+          id: crypto.randomUUID(),
+          date: todayDateString(),
+          createdAt: new Date().toISOString(),
+          loggedAt: logTime,
+          foodName,
+          energyKj,
+          proteinG,
+          fatG,
+          carbsG,
+          fiberG,
+          savedFoodId: entryId,
+          source: isBarcode ? 'barcode' : 'scan',
+        };
+        await addFoodLogEntry(logEntry);
+      }
 
       // 3. If this was a barcode-initiated scan, cache the nutrition for that barcode
       if (scanData.barcode) {
@@ -173,7 +185,7 @@ export default function ReviewPage() {
       }
 
       setScanData(null);
-      router.push('/');
+      router.push(fromRecipe ? `/add/recipe?newIngredientId=${entryId}` : '/');
     } catch (error) {
       console.error('Failed to save entry:', error);
       alert('Failed to save. Please try again.');
@@ -184,7 +196,7 @@ export default function ReviewPage() {
 
   const handleCancel = () => {
     setScanData(null);
-    router.push('/add');
+    router.push(fromRecipe ? '/add/recipe' : '/add');
   };
 
   return (
@@ -199,7 +211,7 @@ export default function ReviewPage() {
           onClick={handleSave}
           disabled={isSaving}
         >
-          {isSaving ? 'Saving...' : 'Log'}
+          {isSaving ? 'Saving...' : fromRecipe ? 'Save' : 'Log'}
         </button>
       </div>
 
@@ -252,25 +264,29 @@ export default function ReviewPage() {
               inputMode="decimal"
             />
           </div>
-          <div className={styles.textFieldRow}>
-            <label className={styles.fieldLabel}>Servings eaten</label>
-            <input
-              className={styles.textInput}
-              value={servingsConsumed}
-              onChange={(e) => setServingsConsumed(e.target.value)}
-              placeholder="1"
-              inputMode="decimal"
-            />
-          </div>
-          <div className={styles.textFieldRow}>
-            <label className={styles.fieldLabel}>Time</label>
-            <input
-              type="time"
-              className={styles.timeInput}
-              value={logTime}
-              onChange={(e) => setLogTime(e.target.value)}
-            />
-          </div>
+          {!fromRecipe && (
+            <>
+              <div className={styles.textFieldRow}>
+                <label className={styles.fieldLabel}>Servings eaten</label>
+                <input
+                  className={styles.textInput}
+                  value={servingsConsumed}
+                  onChange={(e) => setServingsConsumed(e.target.value)}
+                  placeholder="1"
+                  inputMode="decimal"
+                />
+              </div>
+              <div className={styles.textFieldRow}>
+                <label className={styles.fieldLabel}>Time</label>
+                <input
+                  type="time"
+                  className={styles.timeInput}
+                  value={logTime}
+                  onChange={(e) => setLogTime(e.target.value)}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Per Serving */}

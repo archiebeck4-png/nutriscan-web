@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCamera } from '../../../hooks/useCamera';
 import { useOcr } from '../../../hooks/useOcr';
 import { useBarcodeScanner } from '../../../hooks/useBarcodeScanner';
@@ -10,7 +10,17 @@ import { useScanData } from '../../../context/ScanContext';
 import styles from './page.module.css';
 
 export default function ScanPage() {
+  return (
+    <Suspense>
+      <ScanPageContent />
+    </Suspense>
+  );
+}
+
+function ScanPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromRecipe = searchParams.get('from') === 'recipe';
   const { videoRef, permissionState, isReady, capture, initCamera } =
     useCamera();
   const { isProcessing, isReady: ocrReady, progress } = useOcr();
@@ -86,7 +96,7 @@ export default function ScanPage() {
       }
 
       setScanData({ nutrition, imageBlob, barcode: existingBarcode ?? undefined });
-      router.push('/add/review');
+      router.push(fromRecipe ? '/add/review?from=recipe' : '/add/review');
     } catch (err) {
       console.error('Scan error:', err);
       // Resume camera on error
@@ -117,7 +127,7 @@ export default function ScanPage() {
       }
 
       setScanData({ nutrition, imageBlob, barcode: existingBarcode ?? undefined });
-      router.push('/add/review');
+      router.push(fromRecipe ? '/add/review?from=recipe' : '/add/review');
     } catch (err) {
       console.error('Upload scan error:', err);
       setError('Failed to process the image. Please try again.');
