@@ -8,6 +8,7 @@ export default function UnknownBarcodePage() {
   const router = useRouter();
   const { scanData, setScanData } = useScanData();
   const barcode = scanData?.barcode;
+  const fromRecipe = scanData?.fromRecipe === true;
 
   if (!barcode) {
     router.replace('/add/scan');
@@ -43,7 +44,7 @@ export default function UnknownBarcodePage() {
         <div className={styles.cardGroup}>
           <button
             className={styles.card}
-            onClick={() => router.push('/add/scan')}
+            onClick={() => router.push(fromRecipe ? '/add/scan?from=recipe' : '/add/scan')}
           >
             <span className={styles.cardIcon}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -62,7 +63,7 @@ export default function UnknownBarcodePage() {
 
           <button
             className={styles.card}
-            onClick={() => router.push('/add/manual')}
+            onClick={() => router.push(fromRecipe ? '/add/manual?from=recipe' : '/add/manual')}
           >
             <span className={styles.cardIcon}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">

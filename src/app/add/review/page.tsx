@@ -31,8 +31,10 @@ export default function ReviewPage() {
 function ReviewPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const fromRecipe = searchParams.get('from') === 'recipe';
+  const fromRecipeParam = searchParams.get('from') === 'recipe';
   const { scanData, setScanData } = useScanData();
+  // fromRecipe can come from query param OR from context (survives barcode-lookup redirects)
+  const fromRecipe = fromRecipeParam || scanData?.fromRecipe === true;
   const [nutrition, setNutrition] = useState<ScannedNutrition>(
     scanData?.nutrition ?? {
       foodName: '',

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, insertEntry, saveRecipeIngredients } from '../../../lib/db';
 import { useProfile } from '../../../context/ProfileContext';
+import { useScanData } from '../../../context/ScanContext';
 import { kjToDisplay, energyLabel } from '../../../lib/units';
 import type { WebFoodEntry, RecipeIngredient } from '../../../models/types';
 import styles from './page.module.css';
@@ -29,6 +30,7 @@ function RecipePageContent() {
   const searchParams = useSearchParams();
   const newIngredientId = searchParams.get('newIngredientId');
   const { profile } = useProfile();
+  const { setScanData } = useScanData();
   const eu = profile?.energyUnit ?? 'kj';
 
   const [recipeName, setRecipeName] = useState('');
@@ -86,15 +88,26 @@ function RecipePageContent() {
   }, [newIngredientId, allEntries, restoredState]);
 
   // Save recipe state to sessionStorage before navigating away
-  const saveStateAndNavigate = useCallback((path: string) => {
+  const saveStateAndNavigate = useCallback((path: string, setRecipeFlag = false) => {
     const state = {
       recipeName,
       numServings,
       ingredientIds: ingredients.map((i) => ({ id: i.entry.id, servings: i.servings })),
     };
     sessionStorage.setItem(RECIPE_STATE_KEY, JSON.stringify(state));
+    // Set fromRecipe flag in ScanContext so it persists through barcode-lookup etc.
+    if (setRecipeFlag) {
+      const emptyNutrition = {
+        foodName: '', servingSize: '', servingsPerPackage: '',
+        energyPerServing: '', proteinPerServing: '', fatPerServing: '',
+        carbsPerServing: '', fiberPerServing: '',
+        energyPer100g: '', proteinPer100g: '', fatPer100g: '',
+        carbsPer100g: '', fiberPer100g: '', rawText: '',
+      };
+      setScanData({ nutrition: emptyNutrition, imageBlob: null, fromRecipe: true });
+    }
     router.push(path);
-  }, [recipeName, numServings, ingredients, router]);
+  }, [recipeName, numServings, ingredients, router, setScanData]);
 
   // Deduplicate library items by food name (keep most recent)
   const libraryItems = useMemo(() => {
@@ -321,7 +334,7 @@ function RecipePageContent() {
         <div className={styles.newOptions}>
           <button
             className={styles.newOptionBtn}
-            onClick={() => saveStateAndNavigate('/add/scan?from=recipe')}
+            onClick={() => saveStateAndNavigate('/add/scan?from=recipe', true)}
             type="button"
           >
             <span>📷</span>

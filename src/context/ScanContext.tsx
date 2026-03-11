@@ -7,6 +7,7 @@ interface ScanData {
   nutrition: ScannedNutrition;
   imageBlob: Blob | null;
   barcode?: string; // present when user scanned label after barcode lookup failed
+  fromRecipe?: boolean; // true when adding an ingredient to a recipe
 }
 
 interface ScanContextValue {

@@ -23,9 +23,11 @@ export default function ManualEntryPage() {
 function ManualEntryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const fromRecipe = searchParams.get('from') === 'recipe';
+  const fromRecipeParam = searchParams.get('from') === 'recipe';
   const { profile } = useProfile();
   const { scanData, setScanData } = useScanData();
+  // fromRecipe can come from query param OR from context (survives barcode-lookup redirects)
+  const fromRecipe = fromRecipeParam || scanData?.fromRecipe === true;
   const pendingBarcode = scanData?.barcode ?? null;
   const eu = profile?.energyUnit ?? 'kj';
   const [foodName, setFoodName] = useState('');

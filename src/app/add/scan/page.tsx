@@ -20,7 +20,7 @@ export default function ScanPage() {
 function ScanPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const fromRecipe = searchParams.get('from') === 'recipe';
+  const fromRecipeParam = searchParams.get('from') === 'recipe';
   const { videoRef, permissionState, isReady, capture, initCamera } =
     useCamera();
   const { isProcessing, isReady: ocrReady, progress } = useOcr();
@@ -33,6 +33,8 @@ function ScanPageContent() {
 
   // If there's already a barcode in ScanContext, we're in "scan the label" mode
   const existingBarcode = scanData?.barcode ?? null;
+  // fromRecipe can come from query param OR from context (set by recipe page)
+  const fromRecipe = fromRecipeParam || scanData?.fromRecipe === true;
 
   useEffect(() => {
     initCamera();
@@ -52,10 +54,10 @@ function ScanPageContent() {
         energyPer100g: '', proteinPer100g: '', fatPer100g: '',
         carbsPer100g: '', fiberPer100g: '', rawText: '',
       };
-      setScanData({ nutrition: emptyNutrition, imageBlob: null, barcode });
+      setScanData({ nutrition: emptyNutrition, imageBlob: null, barcode, fromRecipe });
       router.push('/add/barcode-lookup');
     },
-    [navigating, setScanData, router]
+    [navigating, setScanData, router, fromRecipe]
   );
 
   // Barcode scanner hook — runs continuously in background
@@ -95,8 +97,8 @@ function ScanPageContent() {
         return;
       }
 
-      setScanData({ nutrition, imageBlob, barcode: existingBarcode ?? undefined });
-      router.push(fromRecipe ? '/add/review?from=recipe' : '/add/review');
+      setScanData({ nutrition, imageBlob, barcode: existingBarcode ?? undefined, fromRecipe });
+      router.push('/add/review');
     } catch (err) {
       console.error('Scan error:', err);
       // Resume camera on error
@@ -126,8 +128,8 @@ function ScanPageContent() {
         return;
       }
 
-      setScanData({ nutrition, imageBlob, barcode: existingBarcode ?? undefined });
-      router.push(fromRecipe ? '/add/review?from=recipe' : '/add/review');
+      setScanData({ nutrition, imageBlob, barcode: existingBarcode ?? undefined, fromRecipe });
+      router.push('/add/review');
     } catch (err) {
       console.error('Upload scan error:', err);
       setError('Failed to process the image. Please try again.');
