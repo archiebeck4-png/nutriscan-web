@@ -54,7 +54,7 @@ export interface FoodLogEntry {
   fiberG: number;
 
   savedFoodId: string | null;
-  source: 'manual' | 'scan' | 'library' | 'barcode';
+  source: 'manual' | 'scan' | 'library' | 'barcode' | 'quick';
 }
 
 // --- Scanned nutrition (OCR parsing result) ---

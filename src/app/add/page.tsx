@@ -27,6 +27,20 @@ export default function AddFoodPage() {
 
         <button
           className={styles.card}
+          onClick={() => router.push('/add/quick')}
+        >
+          <span className={styles.cardIcon}>⚡</span>
+          <div className={styles.cardText}>
+            <span className={styles.cardLabel}>Quick Add</span>
+            <span className={styles.cardDesc}>
+              Log macros without saving to library
+            </span>
+          </div>
+          <span className={styles.chevron}>›</span>
+        </button>
+
+        <button
+          className={styles.card}
           onClick={() => router.push('/add/manual')}
         >
           <span className={styles.cardIcon}>✏️</span>
