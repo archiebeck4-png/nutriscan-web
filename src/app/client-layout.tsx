@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ScanContextProvider } from '../context/ScanContext';
 import { ProfileContextProvider, useProfile } from '../context/ProfileContext';
 import { AuthContextProvider, useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+import { apiEnabled } from '../lib/api';
 import BottomNav from '../components/BottomNav';
 
 export default function ClientLayout({
@@ -34,12 +34,12 @@ function LayoutGate({ children }: { children: React.ReactNode }) {
   const isDebug = pathname.startsWith('/debug');
 
   const isLoading = authLoading || profileLoading;
-  const authEnabled = !!supabase;
+  const authEnabled = apiEnabled;
 
   useEffect(() => {
     if (isLoading) return;
 
-    // Auth gate: if Supabase is configured and no user/guest, redirect to login
+    // Auth gate: if API is configured and no user/guest, redirect to login
     if (authEnabled && !user && !isGuest && !isLogin) {
       router.replace('/login');
       return;

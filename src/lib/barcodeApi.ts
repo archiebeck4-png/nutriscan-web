@@ -1,6 +1,6 @@
 import type { ScannedNutrition } from '../models/types';
 import { getCachedBarcode, cacheBarcode } from './db';
-import { supabase } from './supabase';
+import { apiEnabled, apiFetch } from './api';
 
 const KJ_PER_KCAL = 4.184;
 
@@ -41,22 +41,16 @@ function num(val: number | undefined): string {
   return val != null ? String(Math.round(val * 10) / 10) : '';
 }
 
-// --- Shared (Supabase) cache helpers ---
+// --- Shared cache helpers (self-hosted API) ---
 
 async function getFromSharedCache(barcode: string): Promise<BarcodeResult | null> {
-  if (!supabase) return null;
+  if (!apiEnabled) return null;
   try {
-    const { data, error } = await supabase
-      .from('barcode_cache')
-      .select('product_name, nutrition')
-      .eq('barcode', barcode)
-      .single();
-    if (error || !data) return null;
-    return {
-      found: true,
-      nutrition: data.nutrition as ScannedNutrition,
-      productName: data.product_name,
-    };
+    const data = await apiFetch<{ found: boolean; productName: string; nutrition: ScannedNutrition }>(
+      `/barcode/${barcode}`
+    );
+    if (!data.found) return null;
+    return { found: true, nutrition: data.nutrition, productName: data.productName };
   } catch {
     return null;
   }
@@ -67,19 +61,12 @@ export async function saveToSharedCache(
   productName: string,
   nutrition: ScannedNutrition
 ): Promise<void> {
-  if (!supabase) return;
+  if (!apiEnabled) return;
   try {
-    await supabase
-      .from('barcode_cache')
-      .upsert(
-        {
-          barcode,
-          product_name: productName,
-          nutrition,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'barcode' }
-      );
+    await apiFetch(`/barcode/${barcode}`, {
+      method: 'PUT',
+      body: JSON.stringify({ productName, nutrition }),
+    });
   } catch (err) {
     console.warn('Shared cache write failed:', err);
   }
@@ -206,7 +193,7 @@ export async function lookupBarcode(barcode: string): Promise<BarcodeResult> {
     console.warn('Local cache read failed:', err);
   }
 
-  // 2. Check shared Supabase cache (fast, ~100ms)
+  // 2. Check shared server cache (fast, ~100ms)
   try {
     const shared = await getFromSharedCache(barcode);
     if (shared && shared.found && shared.nutrition) {

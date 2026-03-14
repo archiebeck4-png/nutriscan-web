@@ -9,7 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.95.3",
     "barcode-detector": "^3.0.8",
     "dexie": "^4.3.0",
     "dexie-react-hooks": "^4.2.0",

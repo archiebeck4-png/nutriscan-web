@@ -7,8 +7,16 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
-import { supabase } from '../lib/supabase';
-import type { User, Session } from '@supabase/supabase-js';
+import { apiEnabled, apiFetch, getToken, setToken, clearToken } from '../lib/api';
+
+interface User {
+  id: string;
+  email: string;
+}
+
+interface Session {
+  access_token: string;
+}
 
 interface AuthContextValue {
   user: User | null;
@@ -38,49 +46,72 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
 
+  // Restore session from stored JWT on mount
   useEffect(() => {
-    if (!supabase) {
+    if (!apiEnabled) {
       setIsLoading(false);
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      setUser(s?.user ?? null);
+    const token = getToken();
+    if (!token) {
       setIsLoading(false);
-    }).catch(() => {
-      setIsLoading(false);
-    });
+      return;
+    }
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
+    // Validate the stored token
+    apiFetch<{ user: User }>('/auth/me')
+      .then((data) => {
+        setUser(data.user);
+        setSession({ access_token: token });
+      })
+      .catch((err: Error & { status?: number }) => {
+        // 401 means token is expired/invalid — clear it
+        if (err.status === 401) {
+          clearToken();
+        }
+        // Network error — keep token, user can retry later
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    if (!supabase) return { error: 'Auth not configured' };
+    if (!apiEnabled) return { error: 'Auth not configured' };
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { error: error?.message ?? null };
-    } catch {
+      const data = await apiFetch<{ user: User; token: string }>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+      setToken(data.token);
+      setUser(data.user);
+      setSession({ access_token: data.token });
+      return { error: null };
+    } catch (err) {
+      if (err instanceof Error) {
+        return { error: err.message };
+      }
       return { error: 'Unable to connect. Check your internet connection.' };
     }
   };
 
   const signUp = async (email: string, password: string) => {
-    if (!supabase) return { error: 'Auth not configured', needsConfirmation: false };
+    if (!apiEnabled) return { error: 'Auth not configured', needsConfirmation: false };
     try {
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) return { error: error.message, needsConfirmation: false };
-      // If user exists but session is null, email confirmation is required
-      const needsConfirmation = !!data.user && !data.session;
-      return { error: null, needsConfirmation };
-    } catch {
+      const data = await apiFetch<{ user: User; token: string }>('/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+      setToken(data.token);
+      setUser(data.user);
+      setSession({ access_token: data.token });
+      // No email confirmation with self-hosted auth
+      return { error: null, needsConfirmation: false };
+    } catch (err) {
+      if (err instanceof Error) {
+        return { error: err.message, needsConfirmation: false };
+      }
       return { error: 'Unable to connect. Check your internet connection.', needsConfirmation: false };
     }
   };
@@ -90,8 +121,9 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
       setIsGuest(false);
       return;
     }
-    if (!supabase) return;
-    await supabase.auth.signOut();
+    clearToken();
+    setUser(null);
+    setSession(null);
   };
 
   const skipAuth = () => {
