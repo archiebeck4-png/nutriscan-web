@@ -98,15 +98,15 @@ function ReviewPageContent() {
     }));
   }, [nutrition.servingSize]);
 
+  // Auto-redirect away if no scan data (e.g. user navigated back after logging)
+  useEffect(() => {
+    if (!scanData) {
+      router.replace('/add');
+    }
+  }, [scanData, router]);
+
   if (!scanData) {
-    return (
-      <div className={styles.centered}>
-        <p>No scan data. Go back and scan a label first.</p>
-        <button className={styles.actionButton} onClick={() => router.push('/add')}>
-          Back
-        </button>
-      </div>
-    );
+    return null;
   }
 
   const updateField = (field: keyof ScannedNutrition, value: string) => {
@@ -187,7 +187,7 @@ function ReviewPageContent() {
       }
 
       setScanData(null);
-      router.push(fromRecipe ? `/add/recipe?newIngredientId=${entryId}` : '/');
+      router.replace(fromRecipe ? `/add/recipe?newIngredientId=${entryId}` : '/');
     } catch (error) {
       console.error('Failed to save entry:', error);
       alert('Failed to save. Please try again.');
@@ -198,7 +198,7 @@ function ReviewPageContent() {
 
   const handleCancel = () => {
     setScanData(null);
-    router.push(fromRecipe ? '/add/recipe' : '/add');
+    router.replace(fromRecipe ? '/add/recipe' : '/add');
   };
 
   return (
