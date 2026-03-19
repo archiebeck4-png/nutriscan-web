@@ -1,7 +1,8 @@
 import styles from './EmptyState.module.css';
+import type { ReactNode } from 'react';
 
 interface EmptyStateProps {
-  icon?: string;
+  icon?: ReactNode;
   title: string;
   message: string;
 }

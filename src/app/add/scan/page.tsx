@@ -98,7 +98,7 @@ function ScanPageContent() {
       }
 
       setScanData({ nutrition, imageBlob, barcode: existingBarcode ?? undefined, fromRecipe });
-      router.replace('/add/review');
+      window.location.replace('/add/review');
     } catch (err) {
       console.error('Scan error:', err);
       // Resume camera on error
@@ -129,7 +129,7 @@ function ScanPageContent() {
       }
 
       setScanData({ nutrition, imageBlob, barcode: existingBarcode ?? undefined, fromRecipe });
-      router.replace('/add/review');
+      window.location.replace('/add/review');
     } catch (err) {
       console.error('Upload scan error:', err);
       setError('Failed to process the image. Please try again.');

@@ -101,9 +101,9 @@ function ReviewPageContent() {
   // Auto-redirect away if no scan data (e.g. user navigated back after logging)
   useEffect(() => {
     if (!scanData) {
-      router.replace('/add');
+      window.location.replace('/add');
     }
-  }, [scanData, router]);
+  }, [scanData]);
 
   if (!scanData) {
     return null;
@@ -187,7 +187,9 @@ function ReviewPageContent() {
       }
 
       setScanData(null);
-      router.replace(fromRecipe ? `/add/recipe?newIngredientId=${entryId}` : '/');
+      // Use native location.replace to fully exit — Next.js router.replace
+      // doesn't reliably clear history in iOS standalone PWA / WKWebView
+      window.location.replace(fromRecipe ? `/add/recipe?newIngredientId=${entryId}` : '/');
     } catch (error) {
       console.error('Failed to save entry:', error);
       alert('Failed to save. Please try again.');
@@ -198,7 +200,7 @@ function ReviewPageContent() {
 
   const handleCancel = () => {
     setScanData(null);
-    router.replace(fromRecipe ? '/add/recipe' : '/add');
+    window.location.replace(fromRecipe ? '/add/recipe' : '/add');
   };
 
   return (
