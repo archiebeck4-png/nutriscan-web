@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scaleshift-v3';
+const CACHE_NAME = 'scaleshift-v4';
 
 const PRECACHE_URLS = [
   '/',
