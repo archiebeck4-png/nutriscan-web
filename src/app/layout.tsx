@@ -37,7 +37,18 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/sw.js');
+                navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                  // Force an update check every time the app loads
+                  reg.update();
+                  // Reload the page once a new service worker takes control,
+                  // so the user immediately sees the new version.
+                  var hasReloaded = false;
+                  navigator.serviceWorker.addEventListener('controllerchange', function() {
+                    if (hasReloaded) return;
+                    hasReloaded = true;
+                    window.location.reload();
+                  });
+                });
               }
             `,
           }}
