@@ -1,5 +1,17 @@
 # ScaleShift (NutriScan Web) - CLAUDE.md
 
+> # ⚠️ STOP — THIS WEB PROJECT IS ABANDONED ⚠️
+>
+> **The user has moved on to the native iOS app at `/Users/archie/Desktop/ScaleShift/`.**
+>
+> The user **always** wants to work on the **SwiftUI / Xcode version**, not this web project. The web project (`/Users/archie/nutriscan-web/`) is left behind and should NOT receive new features, bug fixes, or any other changes unless the user explicitly says "work on the web version".
+>
+> **What to do when the user asks for any change to ScaleShift:**
+> 1. Make the change in the Xcode project at `/Users/archie/Desktop/ScaleShift/`, not here.
+> 2. The Xcode project has its own `CLAUDE.md` — read it for tech stack, conventions, and structure.
+> 3. The iOS app is a fully native SwiftUI + SwiftData app. It is **NOT** a WebView wrapper around this website — it is an independent codebase. Changes made here do not affect the iOS app and vice versa.
+> 4. Do not commit/push to this repo unless the user explicitly says "update the web version too".
+
 ## Project Overview
 
 Offline-first nutrition tracking PWA. Users scan nutrition labels (OCR) or barcodes, log food intake, and track daily macros against calculated targets. Designed for iOS App Store deployment.
