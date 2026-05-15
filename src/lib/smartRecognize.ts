@@ -155,11 +155,13 @@ function mergeResults(results: ModeResult[]): ScannedNutrition {
     fatPerServing: '',
     carbsPerServing: '',
     fiberPerServing: '',
+    saturatedFatPerServing: '',
     energyPer100g: '',
     proteinPer100g: '',
     fatPer100g: '',
     carbsPer100g: '',
     fiberPer100g: '',
+    saturatedFatPer100g: '',
     rawText: sorted[0]?.nutrition.rawText || '',
   };
 
@@ -176,6 +178,8 @@ function mergeResults(results: ModeResult[]): ScannedNutrition {
     'carbsPer100g',
     'fiberPerServing',
     'fiberPer100g',
+    'saturatedFatPerServing',
+    'saturatedFatPer100g',
   ] as const;
 
   for (const field of fields) {

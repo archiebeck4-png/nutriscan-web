@@ -43,7 +43,7 @@ export default function LibraryPage() {
 
   const handleLog = async (entry: WebFoodEntry) => {
     const mode = quantityModes[entry.id] || 'servings';
-    let energyKj: number, proteinG: number, fatG: number, carbsG: number, fiberG: number;
+    let energyKj: number, proteinG: number, fatG: number, carbsG: number, fiberG: number, saturatedFatG: number;
 
     if (mode === 'grams') {
       const g = parseFloat(grams[entry.id] || '0') || 0;
@@ -54,11 +54,13 @@ export default function LibraryPage() {
       const f100 = entry.fatPer100g ?? derivePer100gFromServing(entry.fatPerServing, entry.servingSize);
       const c100 = entry.carbsPer100g ?? derivePer100gFromServing(entry.carbsPerServing, entry.servingSize);
       const fi100 = entry.fiberPer100g ?? derivePer100gFromServing(entry.fiberPerServing, entry.servingSize);
+      const sf100 = entry.saturatedFatPer100g ?? derivePer100gFromServing(entry.saturatedFatPerServing ?? null, entry.servingSize);
       energyKj = (e100 ?? 0) * factor;
       proteinG = (p100 ?? 0) * factor;
       fatG = (f100 ?? 0) * factor;
       carbsG = (c100 ?? 0) * factor;
       fiberG = (fi100 ?? 0) * factor;
+      saturatedFatG = (sf100 ?? 0) * factor;
     } else {
       const qty = parseFloat(servings[entry.id] || '1') || 1;
       energyKj = (entry.energyPerServing ?? 0) * qty;
@@ -66,6 +68,7 @@ export default function LibraryPage() {
       fatG = (entry.fatPerServing ?? 0) * qty;
       carbsG = (entry.carbsPerServing ?? 0) * qty;
       fiberG = (entry.fiberPerServing ?? 0) * qty;
+      saturatedFatG = (entry.saturatedFatPerServing ?? 0) * qty;
     }
 
     const logEntry: FoodLogEntry = {
@@ -79,6 +82,7 @@ export default function LibraryPage() {
       fatG,
       carbsG,
       fiberG,
+      saturatedFatG,
       savedFoodId: entry.id,
       source: 'library',
     };

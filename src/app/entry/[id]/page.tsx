@@ -91,20 +91,22 @@ export default function EntryDetailPage({ params }: { params: Promise<{ id: stri
       <div className="sectionHeader">PER SERVING</div>
       <div className="section">
         <NutrientRow label="Energy" value={entry.energyPerServing != null ? Math.round(kjToDisplay(entry.energyPerServing, eu) * 10) / 10 : null} unit={energyLabel(eu)} />
-        <NutrientRow label="Protein" value={entry.proteinPerServing} unit="g" />
-        <NutrientRow label="Fat" value={entry.fatPerServing} unit="g" />
-        <NutrientRow label="Carbs" value={entry.carbsPerServing} unit="g" />
-        <NutrientRow label="Fiber" value={entry.fiberPerServing ?? null} unit="g" />
+        {profile?.trackProtein && <NutrientRow label="Protein" value={entry.proteinPerServing} unit="g" />}
+        {profile?.trackFat && <NutrientRow label="Fat" value={entry.fatPerServing} unit="g" />}
+        {profile?.trackSaturatedFat && <NutrientRow label="Saturated Fat" value={entry.saturatedFatPerServing ?? null} unit="g" />}
+        {profile?.trackCarbs && <NutrientRow label="Carbs" value={entry.carbsPerServing} unit="g" />}
+        {profile?.trackFiber && <NutrientRow label="Fiber" value={entry.fiberPerServing ?? null} unit="g" />}
       </div>
 
       {/* Per 100g */}
       <div className="sectionHeader">PER 100g</div>
       <div className="section">
         <NutrientRow label="Energy" value={entry.energyPer100g != null ? Math.round(kjToDisplay(entry.energyPer100g, eu) * 10) / 10 : null} unit={energyLabel(eu)} />
-        <NutrientRow label="Protein" value={entry.proteinPer100g} unit="g" />
-        <NutrientRow label="Fat" value={entry.fatPer100g} unit="g" />
-        <NutrientRow label="Carbs" value={entry.carbsPer100g} unit="g" />
-        <NutrientRow label="Fiber" value={entry.fiberPer100g ?? null} unit="g" />
+        {profile?.trackProtein && <NutrientRow label="Protein" value={entry.proteinPer100g} unit="g" />}
+        {profile?.trackFat && <NutrientRow label="Fat" value={entry.fatPer100g} unit="g" />}
+        {profile?.trackSaturatedFat && <NutrientRow label="Saturated Fat" value={entry.saturatedFatPer100g ?? null} unit="g" />}
+        {profile?.trackCarbs && <NutrientRow label="Carbs" value={entry.carbsPer100g} unit="g" />}
+        {profile?.trackFiber && <NutrientRow label="Fiber" value={entry.fiberPer100g ?? null} unit="g" />}
       </div>
 
       {/* Scanned Image */}

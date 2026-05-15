@@ -30,6 +30,14 @@ export interface UserProfile {
   dailyFatTargetG: number;
   dailyCarbsTargetG: number;
   dailyFiberTargetG: number;
+  dailySaturatedFatTargetG: number;
+
+  // Per-macro tracking toggles (energy is always tracked)
+  trackProtein: boolean;
+  trackFat: boolean;
+  trackCarbs: boolean;
+  trackFiber: boolean;
+  trackSaturatedFat: boolean;
 
   // Unit preferences
   energyUnit: EnergyUnit;
@@ -52,6 +60,7 @@ export interface FoodLogEntry {
   fatG: number;
   carbsG: number;
   fiberG: number;
+  saturatedFatG: number;
 
   savedFoodId: string | null;
   source: 'manual' | 'scan' | 'library' | 'barcode' | 'quick';
@@ -68,12 +77,14 @@ export interface ScannedNutrition {
   fatPerServing: string;
   carbsPerServing: string;
   fiberPerServing: string;
+  saturatedFatPerServing: string;
 
   energyPer100g: string;
   proteinPer100g: string;
   fatPer100g: string;
   carbsPer100g: string;
   fiberPer100g: string;
+  saturatedFatPer100g: string;
 
   rawText: string;
 }
@@ -97,12 +108,14 @@ export interface WebFoodEntry {
   fatPerServing: number | null;
   carbsPerServing: number | null;
   fiberPerServing: number | null;
+  saturatedFatPerServing: number | null;
 
   energyPer100g: number | null;
   proteinPer100g: number | null;
   fatPer100g: number | null;
   carbsPer100g: number | null;
   fiberPer100g: number | null;
+  saturatedFatPer100g: number | null;
 
   servingSize: string | null;
   servingsPerPackage: string | null;

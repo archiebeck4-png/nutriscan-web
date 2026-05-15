@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useScanData } from '../../../context/ScanContext';
+import { useProfile } from '../../../context/ProfileContext';
 import { insertEntry, addFoodLogEntry, cacheBarcode } from '../../../lib/db';
 import { saveToSharedCache } from '../../../lib/barcodeApi';
 import { todayDateString, currentTimeString } from '../../../lib/dates';
@@ -33,6 +34,7 @@ function ReviewPageContent() {
   const searchParams = useSearchParams();
   const fromRecipeParam = searchParams.get('from') === 'recipe';
   const { scanData, setScanData } = useScanData();
+  const { profile } = useProfile();
   // fromRecipe can come from query param OR from context (survives barcode-lookup redirects)
   const fromRecipe = fromRecipeParam || scanData?.fromRecipe === true;
   const [nutrition, setNutrition] = useState<ScannedNutrition>(
@@ -45,11 +47,13 @@ function ReviewPageContent() {
       fatPerServing: '',
       carbsPerServing: '',
       fiberPerServing: '',
+      saturatedFatPerServing: '',
       energyPer100g: '',
       proteinPer100g: '',
       fatPer100g: '',
       carbsPer100g: '',
       fiberPer100g: '',
+      saturatedFatPer100g: '',
       rawText: '',
     }
   );
@@ -64,7 +68,8 @@ function ReviewPageContent() {
 
     const hasAnyPer100gData = !!(
       nutrition.energyPer100g || nutrition.proteinPer100g ||
-      nutrition.fatPer100g || nutrition.carbsPer100g || nutrition.fiberPer100g
+      nutrition.fatPer100g || nutrition.carbsPer100g || nutrition.fiberPer100g ||
+      nutrition.saturatedFatPer100g
     );
     if (!hasAnyPer100gData) return;
 
@@ -74,6 +79,7 @@ function ReviewPageContent() {
       nutrition.fatPerServing,
       nutrition.carbsPerServing,
       nutrition.fiberPerServing,
+      nutrition.saturatedFatPerServing,
     ];
     const allPerServingEmpty = perServingFields.every(
       (v) => !v || v.trim() === '' || v.trim() === '0'
@@ -95,6 +101,7 @@ function ReviewPageContent() {
       fatPerServing: derive(prev.fatPer100g),
       carbsPerServing: derive(prev.carbsPer100g),
       fiberPerServing: derive(prev.fiberPer100g),
+      saturatedFatPerServing: derive(prev.saturatedFatPer100g),
     }));
   }, [nutrition.servingSize]);
 
@@ -138,11 +145,13 @@ function ReviewPageContent() {
         fatPerServing: parseNum(nutrition.fatPerServing),
         carbsPerServing: parseNum(nutrition.carbsPerServing),
         fiberPerServing: parseNum(nutrition.fiberPerServing),
+        saturatedFatPerServing: parseNum(nutrition.saturatedFatPerServing),
         energyPer100g: parseNum(nutrition.energyPer100g),
         proteinPer100g: parseNum(nutrition.proteinPer100g),
         fatPer100g: parseNum(nutrition.fatPer100g),
         carbsPer100g: parseNum(nutrition.carbsPer100g),
         fiberPer100g: parseNum(nutrition.fiberPer100g),
+        saturatedFatPer100g: parseNum(nutrition.saturatedFatPer100g),
         servingSize: nutrition.servingSize.trim() || null,
         servingsPerPackage: nutrition.servingsPerPackage.trim() || null,
         rawOcrText: nutrition.rawText || null,
@@ -158,6 +167,7 @@ function ReviewPageContent() {
         const fatG = (parseNum(nutrition.fatPerServing) ?? 0) * qty;
         const carbsG = (parseNum(nutrition.carbsPerServing) ?? 0) * qty;
         const fiberG = (parseNum(nutrition.fiberPerServing) ?? 0) * qty;
+        const saturatedFatG = (parseNum(nutrition.saturatedFatPerServing) ?? 0) * qty;
 
         const logEntry: FoodLogEntry = {
           id: crypto.randomUUID(),
@@ -170,6 +180,7 @@ function ReviewPageContent() {
           fatG,
           carbsG,
           fiberG,
+          saturatedFatG,
           savedFoodId: entryId,
           source: isBarcode ? 'barcode' : 'scan',
         };
@@ -297,10 +308,21 @@ function ReviewPageContent() {
         <div className="sectionHeader">PER SERVING</div>
         <div className="section">
           <NutrientField label="Energy (kJ)" value={nutrition.energyPerServing} onChange={(v) => updateField('energyPerServing', v)} />
-          <NutrientField label="Protein (g)" value={nutrition.proteinPerServing} onChange={(v) => updateField('proteinPerServing', v)} />
-          <NutrientField label="Fat (g)" value={nutrition.fatPerServing} onChange={(v) => updateField('fatPerServing', v)} />
-          <NutrientField label="Carbs (g)" value={nutrition.carbsPerServing} onChange={(v) => updateField('carbsPerServing', v)} />
-          <NutrientField label="Fiber (g)" value={nutrition.fiberPerServing} onChange={(v) => updateField('fiberPerServing', v)} />
+          {profile?.trackProtein && (
+            <NutrientField label="Protein (g)" value={nutrition.proteinPerServing} onChange={(v) => updateField('proteinPerServing', v)} />
+          )}
+          {profile?.trackFat && (
+            <NutrientField label="Fat (g)" value={nutrition.fatPerServing} onChange={(v) => updateField('fatPerServing', v)} />
+          )}
+          {profile?.trackSaturatedFat && (
+            <NutrientField label="Saturated Fat (g)" value={nutrition.saturatedFatPerServing} onChange={(v) => updateField('saturatedFatPerServing', v)} />
+          )}
+          {profile?.trackCarbs && (
+            <NutrientField label="Carbs (g)" value={nutrition.carbsPerServing} onChange={(v) => updateField('carbsPerServing', v)} />
+          )}
+          {profile?.trackFiber && (
+            <NutrientField label="Fiber (g)" value={nutrition.fiberPerServing} onChange={(v) => updateField('fiberPerServing', v)} />
+          )}
         </div>
 
         <div style={{ height: 40 }} />

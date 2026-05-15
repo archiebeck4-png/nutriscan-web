@@ -37,6 +37,7 @@ function ManualEntryContent() {
   const [fat, setFat] = useState('');
   const [carbs, setCarbs] = useState('');
   const [fiber, setFiber] = useState('');
+  const [saturatedFat, setSaturatedFat] = useState('');
   const [logTime, setLogTime] = useState(currentTimeString());
   const [isSaving, setIsSaving] = useState(false);
 
@@ -60,11 +61,13 @@ function ManualEntryContent() {
         fatPerServing: parseFloat(fat) || 0,
         carbsPerServing: parseFloat(carbs) || 0,
         fiberPerServing: parseFloat(fiber) || 0,
+        saturatedFatPerServing: parseFloat(saturatedFat) || 0,
         energyPer100g: null,
         proteinPer100g: null,
         fatPer100g: null,
         carbsPer100g: null,
         fiberPer100g: null,
+        saturatedFatPer100g: null,
         servingSize: servingSize.trim() || null,
         servingsPerPackage: null,
         rawOcrText: null,
@@ -85,6 +88,7 @@ function ManualEntryContent() {
           fatG: parseFloat(fat) || 0,
           carbsG: parseFloat(carbs) || 0,
           fiberG: parseFloat(fiber) || 0,
+          saturatedFatG: parseFloat(saturatedFat) || 0,
           savedFoodId: libraryEntry.id,
           source: pendingBarcode ? 'barcode' : 'manual',
         };
@@ -102,11 +106,13 @@ function ManualEntryContent() {
           fatPerServing: fat || '',
           carbsPerServing: carbs || '',
           fiberPerServing: fiber || '',
+          saturatedFatPerServing: saturatedFat || '',
           energyPer100g: '',
           proteinPer100g: '',
           fatPer100g: '',
           carbsPer100g: '',
           fiberPer100g: '',
+          saturatedFatPer100g: '',
           rawText: `Barcode: ${pendingBarcode}`,
         };
         try {
@@ -207,10 +213,21 @@ function ManualEntryContent() {
         <div className="sectionHeader">NUTRITION</div>
         <div className="section">
           <NutrientField label={`Energy (${energyLabel(eu)})`} value={energy} onChange={setEnergy} />
-          <NutrientField label="Protein (g)" value={protein} onChange={setProtein} />
-          <NutrientField label="Fat (g)" value={fat} onChange={setFat} />
-          <NutrientField label="Carbs (g)" value={carbs} onChange={setCarbs} />
-          <NutrientField label="Fiber (g)" value={fiber} onChange={setFiber} />
+          {profile?.trackProtein && (
+            <NutrientField label="Protein (g)" value={protein} onChange={setProtein} />
+          )}
+          {profile?.trackFat && (
+            <NutrientField label="Fat (g)" value={fat} onChange={setFat} />
+          )}
+          {profile?.trackSaturatedFat && (
+            <NutrientField label="Saturated Fat (g)" value={saturatedFat} onChange={setSaturatedFat} />
+          )}
+          {profile?.trackCarbs && (
+            <NutrientField label="Carbs (g)" value={carbs} onChange={setCarbs} />
+          )}
+          {profile?.trackFiber && (
+            <NutrientField label="Fiber (g)" value={fiber} onChange={setFiber} />
+          )}
         </div>
 
         <div style={{ height: 40 }} />

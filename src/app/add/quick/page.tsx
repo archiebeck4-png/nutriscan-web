@@ -21,6 +21,7 @@ export default function QuickAddPage() {
   const [fat, setFat] = useState('');
   const [carbs, setCarbs] = useState('');
   const [fiber, setFiber] = useState('');
+  const [saturatedFat, setSaturatedFat] = useState('');
   const [logTime, setLogTime] = useState(currentTimeString());
   const [isSaving, setIsSaving] = useState(false);
 
@@ -43,6 +44,7 @@ export default function QuickAddPage() {
         fatG: parseFloat(fat) || 0,
         carbsG: parseFloat(carbs) || 0,
         fiberG: parseFloat(fiber) || 0,
+        saturatedFatG: parseFloat(saturatedFat) || 0,
         savedFoodId: null,
         source: 'quick',
       };
@@ -102,10 +104,21 @@ export default function QuickAddPage() {
         <div className="sectionHeader">NUTRITION</div>
         <div className="section">
           <NutrientField label={`Energy (${energyLabel(eu)})`} value={energy} onChange={setEnergy} />
-          <NutrientField label="Protein (g)" value={protein} onChange={setProtein} />
-          <NutrientField label="Fat (g)" value={fat} onChange={setFat} />
-          <NutrientField label="Carbs (g)" value={carbs} onChange={setCarbs} />
-          <NutrientField label="Fiber (g)" value={fiber} onChange={setFiber} />
+          {profile?.trackProtein && (
+            <NutrientField label="Protein (g)" value={protein} onChange={setProtein} />
+          )}
+          {profile?.trackFat && (
+            <NutrientField label="Fat (g)" value={fat} onChange={setFat} />
+          )}
+          {profile?.trackSaturatedFat && (
+            <NutrientField label="Saturated Fat (g)" value={saturatedFat} onChange={setSaturatedFat} />
+          )}
+          {profile?.trackCarbs && (
+            <NutrientField label="Carbs (g)" value={carbs} onChange={setCarbs} />
+          )}
+          {profile?.trackFiber && (
+            <NutrientField label="Fiber (g)" value={fiber} onChange={setFiber} />
+          )}
         </div>
 
         <div style={{ height: 40 }} />

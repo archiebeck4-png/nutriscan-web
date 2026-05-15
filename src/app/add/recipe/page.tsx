@@ -100,9 +100,9 @@ function RecipePageContent() {
       const emptyNutrition = {
         foodName: '', servingSize: '', servingsPerPackage: '',
         energyPerServing: '', proteinPerServing: '', fatPerServing: '',
-        carbsPerServing: '', fiberPerServing: '',
+        carbsPerServing: '', fiberPerServing: '', saturatedFatPerServing: '',
         energyPer100g: '', proteinPer100g: '', fatPer100g: '',
-        carbsPer100g: '', fiberPer100g: '', rawText: '',
+        carbsPer100g: '', fiberPer100g: '', saturatedFatPer100g: '', rawText: '',
       };
       setScanData({ nutrition: emptyNutrition, imageBlob: null, fromRecipe: true });
     }
@@ -139,9 +139,10 @@ function RecipePageContent() {
           fat: acc.fat + (ing.entry.fatPerServing ?? 0) * srv,
           carbs: acc.carbs + (ing.entry.carbsPerServing ?? 0) * srv,
           fiber: acc.fiber + (ing.entry.fiberPerServing ?? 0) * srv,
+          saturatedFat: acc.saturatedFat + (ing.entry.saturatedFatPerServing ?? 0) * srv,
         };
       },
-      { energy: 0, protein: 0, fat: 0, carbs: 0, fiber: 0 }
+      { energy: 0, protein: 0, fat: 0, carbs: 0, fiber: 0, saturatedFat: 0 }
     );
   }, [ingredients]);
 
@@ -152,6 +153,7 @@ function RecipePageContent() {
     fat: totals.fat / servingCount,
     carbs: totals.carbs / servingCount,
     fiber: totals.fiber / servingCount,
+    saturatedFat: totals.saturatedFat / servingCount,
   };
 
   const canSave = recipeName.trim().length > 0 && ingredients.length > 0 && !isSaving;
@@ -188,11 +190,13 @@ function RecipePageContent() {
         fatPerServing: perServing.fat,
         carbsPerServing: perServing.carbs,
         fiberPerServing: perServing.fiber,
+        saturatedFatPerServing: perServing.saturatedFat,
         energyPer100g: null,
         proteinPer100g: null,
         fatPer100g: null,
         carbsPer100g: null,
         fiberPer100g: null,
+        saturatedFatPer100g: null,
         servingSize: null,
         servingsPerPackage: String(servingCount),
         rawOcrText: null,
@@ -362,22 +366,36 @@ function RecipePageContent() {
                 <span>Energy</span>
                 <span>{Math.round(kjToDisplay(perServing.energy, eu))} {energyLabel(eu)}</span>
               </div>
-              <div className={styles.totalRow}>
-                <span>Protein</span>
-                <span>{Math.round(perServing.protein * 10) / 10}g</span>
-              </div>
-              <div className={styles.totalRow}>
-                <span>Fat</span>
-                <span>{Math.round(perServing.fat * 10) / 10}g</span>
-              </div>
-              <div className={styles.totalRow}>
-                <span>Carbs</span>
-                <span>{Math.round(perServing.carbs * 10) / 10}g</span>
-              </div>
-              <div className={styles.totalRow}>
-                <span>Fiber</span>
-                <span>{Math.round(perServing.fiber * 10) / 10}g</span>
-              </div>
+              {profile?.trackProtein && (
+                <div className={styles.totalRow}>
+                  <span>Protein</span>
+                  <span>{Math.round(perServing.protein * 10) / 10}g</span>
+                </div>
+              )}
+              {profile?.trackFat && (
+                <div className={styles.totalRow}>
+                  <span>Fat</span>
+                  <span>{Math.round(perServing.fat * 10) / 10}g</span>
+                </div>
+              )}
+              {profile?.trackSaturatedFat && (
+                <div className={styles.totalRow}>
+                  <span>Saturated Fat</span>
+                  <span>{Math.round(perServing.saturatedFat * 10) / 10}g</span>
+                </div>
+              )}
+              {profile?.trackCarbs && (
+                <div className={styles.totalRow}>
+                  <span>Carbs</span>
+                  <span>{Math.round(perServing.carbs * 10) / 10}g</span>
+                </div>
+              )}
+              {profile?.trackFiber && (
+                <div className={styles.totalRow}>
+                  <span>Fiber</span>
+                  <span>{Math.round(perServing.fiber * 10) / 10}g</span>
+                </div>
+              )}
             </div>
           </>
         )}

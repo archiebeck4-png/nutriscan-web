@@ -67,6 +67,7 @@ export default function SettingsPage() {
       dailyFatTargetG: targets.fatG,
       dailyCarbsTargetG: targets.carbsG,
       dailyFiberTargetG: targets.fiberG,
+      dailySaturatedFatTargetG: targets.saturatedFatG,
       updatedAt: new Date().toISOString(),
     });
     setEditing(false);
@@ -89,6 +90,13 @@ export default function SettingsPage() {
 
   const handleWeightUnitChange = async (unit: WeightUnit) => {
     await setProfile({ ...profile, weightUnit: unit, updatedAt: new Date().toISOString() });
+  };
+
+  const handleTrackingChange = async (
+    key: 'trackProtein' | 'trackFat' | 'trackCarbs' | 'trackFiber' | 'trackSaturatedFat',
+    value: boolean
+  ) => {
+    await setProfile({ ...profile, [key]: value, updatedAt: new Date().toISOString() });
   };
 
   const handleClearFoodLog = async () => {
@@ -289,6 +297,39 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Tracking toggles */}
+      <div className="sectionHeader">TRACKING</div>
+      <div className="section">
+        {([
+          ['Protein', 'trackProtein'],
+          ['Fat', 'trackFat'],
+          ['Saturated Fat', 'trackSaturatedFat'],
+          ['Carbs', 'trackCarbs'],
+          ['Fiber', 'trackFiber'],
+        ] as const).map(([label, key]) => {
+          const on = profile[key] ?? false;
+          return (
+            <div className={styles.row} key={key}>
+              <span className={styles.label}>{label}</span>
+              <div className={styles.miniSegmented}>
+                <button
+                  className={`${styles.miniSeg} ${on ? styles.miniSegActive : ''}`}
+                  onClick={() => handleTrackingChange(key, true)}
+                >
+                  On
+                </button>
+                <button
+                  className={`${styles.miniSeg} ${!on ? styles.miniSegActive : ''}`}
+                  onClick={() => handleTrackingChange(key, false)}
+                >
+                  Off
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {/* Daily targets */}
       <div className="sectionHeader">DAILY TARGETS</div>
       <div className="section">
@@ -298,22 +339,36 @@ export default function SettingsPage() {
             {formatEnergy(profile.dailyEnergyTargetKj, eu)}
           </span>
         </div>
-        <div className={styles.row}>
-          <span className={styles.label}>Protein</span>
-          <span className={styles.value}>{profile.dailyProteinTargetG}g</span>
-        </div>
-        <div className={styles.row}>
-          <span className={styles.label}>Fat</span>
-          <span className={styles.value}>{profile.dailyFatTargetG}g</span>
-        </div>
-        <div className={styles.row}>
-          <span className={styles.label}>Carbs</span>
-          <span className={styles.value}>{profile.dailyCarbsTargetG}g</span>
-        </div>
-        <div className={styles.row}>
-          <span className={styles.label}>Fiber</span>
-          <span className={styles.value}>{profile.dailyFiberTargetG}g</span>
-        </div>
+        {profile.trackProtein && (
+          <div className={styles.row}>
+            <span className={styles.label}>Protein</span>
+            <span className={styles.value}>{profile.dailyProteinTargetG}g</span>
+          </div>
+        )}
+        {profile.trackFat && (
+          <div className={styles.row}>
+            <span className={styles.label}>Fat</span>
+            <span className={styles.value}>{profile.dailyFatTargetG}g</span>
+          </div>
+        )}
+        {profile.trackSaturatedFat && (
+          <div className={styles.row}>
+            <span className={styles.label}>Saturated Fat</span>
+            <span className={styles.value}>{profile.dailySaturatedFatTargetG}g</span>
+          </div>
+        )}
+        {profile.trackCarbs && (
+          <div className={styles.row}>
+            <span className={styles.label}>Carbs</span>
+            <span className={styles.value}>{profile.dailyCarbsTargetG}g</span>
+          </div>
+        )}
+        {profile.trackFiber && (
+          <div className={styles.row}>
+            <span className={styles.label}>Fiber</span>
+            <span className={styles.value}>{profile.dailyFiberTargetG}g</span>
+          </div>
+        )}
       </div>
 
       {/* Data management */}

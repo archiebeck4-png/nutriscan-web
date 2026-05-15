@@ -130,6 +130,7 @@ function ResultCard({ result, isBest }: { result: TestResult; isBest: boolean })
             <NutrientRow label="Energy (kJ)" perServing={result.nutrition?.energyPerServing} per100g={result.nutrition?.energyPer100g} />
             <NutrientRow label="Protein (g)" perServing={result.nutrition?.proteinPerServing} per100g={result.nutrition?.proteinPer100g} />
             <NutrientRow label="Fat (g)" perServing={result.nutrition?.fatPerServing} per100g={result.nutrition?.fatPer100g} />
+            <NutrientRow label="Sat Fat (g)" perServing={result.nutrition?.saturatedFatPerServing} per100g={result.nutrition?.saturatedFatPer100g} />
             <NutrientRow label="Carbs (g)" perServing={result.nutrition?.carbsPerServing} per100g={result.nutrition?.carbsPer100g} />
             <NutrientRow label="Fiber (g)" perServing={result.nutrition?.fiberPerServing} per100g={result.nutrition?.fiberPer100g} />
           </div>

@@ -97,10 +97,17 @@ export default function LogPage() {
                       <div className={styles.logInfo}>
                         <span className={styles.logName}>{entry.foodName}</span>
                         <span className={styles.logMeta}>
-                          {Math.round(kjToDisplay(entry.energyKj, eu))} {energyLabel(eu)} &middot; P{' '}
-                          {Math.round(entry.proteinG)}g &middot; F{' '}
-                          {Math.round(entry.fatG)}g &middot; C{' '}
-                          {Math.round(entry.carbsG)}g
+                          {(() => {
+                            const parts: string[] = [
+                              `${Math.round(kjToDisplay(entry.energyKj, eu))} ${energyLabel(eu)}`,
+                            ];
+                            if (profile?.trackProtein) parts.push(`P ${Math.round(entry.proteinG)}g`);
+                            if (profile?.trackFat) parts.push(`F ${Math.round(entry.fatG)}g`);
+                            if (profile?.trackSaturatedFat) parts.push(`Sat ${Math.round(entry.saturatedFatG ?? 0)}g`);
+                            if (profile?.trackCarbs) parts.push(`C ${Math.round(entry.carbsG)}g`);
+                            if (profile?.trackFiber) parts.push(`Fib ${Math.round(entry.fiberG)}g`);
+                            return parts.join(' · ');
+                          })()}
                         </span>
                       </div>
                       <button

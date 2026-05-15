@@ -13,6 +13,8 @@ interface OpenFoodFactsNutriments {
   'proteins_100g'?: number;
   'fat_serving'?: number;
   'fat_100g'?: number;
+  'saturated-fat_serving'?: number;
+  'saturated-fat_100g'?: number;
   'carbohydrates_serving'?: number;
   'carbohydrates_100g'?: number;
   'fiber_serving'?: number;
@@ -99,11 +101,13 @@ async function fetchFromOpenFoodFacts(
       fatPerServing: num(n['fat_serving']),
       carbsPerServing: num(n['carbohydrates_serving']),
       fiberPerServing: num(n['fiber_serving']),
+      saturatedFatPerServing: num(n['saturated-fat_serving']),
       energyPer100g: toKj(n, '100g'),
       proteinPer100g: num(n['proteins_100g']),
       fatPer100g: num(n['fat_100g']),
       carbsPer100g: num(n['carbohydrates_100g']),
       fiberPer100g: num(n['fiber_100g']),
+      saturatedFatPer100g: num(n['saturated-fat_100g']),
       rawText: `Barcode: ${barcode}`,
     };
 
@@ -154,11 +158,13 @@ async function fetchFromUSDA(barcode: string): Promise<BarcodeResult> {
       fatPerServing: '',
       carbsPerServing: '',
       fiberPerServing: '',
+      saturatedFatPerServing: '',
       energyPer100g: energyKj,
       proteinPer100g: num(getNutrient('Protein')),
       fatPer100g: num(getNutrient('Total lipid (fat)')),
       carbsPer100g: num(getNutrient('Carbohydrate, by difference')),
       fiberPer100g: num(getNutrient('Fiber, total dietary')),
+      saturatedFatPer100g: num(getNutrient('Fatty acids, total saturated')),
       rawText: `Barcode: ${barcode}`,
     };
 

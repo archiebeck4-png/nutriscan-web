@@ -24,8 +24,8 @@ export default function DashboardPage() {
   );
 
   const totals = useMemo(() => {
-    if (!entries)
-      return { energyKj: 0, proteinG: 0, fatG: 0, carbsG: 0, fiberG: 0 };
+    const zero = { energyKj: 0, proteinG: 0, fatG: 0, carbsG: 0, fiberG: 0, saturatedFatG: 0 };
+    if (!entries) return zero;
     return entries.reduce(
       (acc, e) => ({
         energyKj: acc.energyKj + e.energyKj,
@@ -33,8 +33,9 @@ export default function DashboardPage() {
         fatG: acc.fatG + e.fatG,
         carbsG: acc.carbsG + e.carbsG,
         fiberG: acc.fiberG + e.fiberG,
+        saturatedFatG: acc.saturatedFatG + (e.saturatedFatG ?? 0),
       }),
-      { energyKj: 0, proteinG: 0, fatG: 0, carbsG: 0, fiberG: 0 }
+      zero
     );
   }, [entries]);
 
@@ -88,34 +89,51 @@ export default function DashboardPage() {
 
       {/* Macro bars */}
       <div className={styles.macroSection}>
-        <MacroProgressBar
-          label="Protein"
-          current={totals.proteinG}
-          target={profile.dailyProteinTargetG}
-          unit="g"
-          color="#34C759"
-        />
-        <MacroProgressBar
-          label="Fat"
-          current={totals.fatG}
-          target={profile.dailyFatTargetG}
-          unit="g"
-          color="#FF9500"
-        />
-        <MacroProgressBar
-          label="Carbs"
-          current={totals.carbsG}
-          target={profile.dailyCarbsTargetG}
-          unit="g"
-          color="#5856D6"
-        />
-        <MacroProgressBar
-          label="Fiber"
-          current={totals.fiberG}
-          target={profile.dailyFiberTargetG}
-          unit="g"
-          color="#AF52DE"
-        />
+        {profile.trackProtein && (
+          <MacroProgressBar
+            label="Protein"
+            current={totals.proteinG}
+            target={profile.dailyProteinTargetG}
+            unit="g"
+            color="#34C759"
+          />
+        )}
+        {profile.trackFat && (
+          <MacroProgressBar
+            label="Fat"
+            current={totals.fatG}
+            target={profile.dailyFatTargetG}
+            unit="g"
+            color="#FF9500"
+          />
+        )}
+        {profile.trackSaturatedFat && (
+          <MacroProgressBar
+            label="Saturated Fat"
+            current={totals.saturatedFatG}
+            target={profile.dailySaturatedFatTargetG}
+            unit="g"
+            color="#FF3B30"
+          />
+        )}
+        {profile.trackCarbs && (
+          <MacroProgressBar
+            label="Carbs"
+            current={totals.carbsG}
+            target={profile.dailyCarbsTargetG}
+            unit="g"
+            color="#5856D6"
+          />
+        )}
+        {profile.trackFiber && (
+          <MacroProgressBar
+            label="Fiber"
+            current={totals.fiberG}
+            target={profile.dailyFiberTargetG}
+            unit="g"
+            color="#AF52DE"
+          />
+        )}
       </div>
 
       {/* Food log */}

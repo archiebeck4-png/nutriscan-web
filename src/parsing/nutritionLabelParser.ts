@@ -22,11 +22,13 @@ export function parseNutritionLabel(ocrLines: string[]): ScannedNutrition {
     fatPerServing: '',
     carbsPerServing: '',
     fiberPerServing: '',
+    saturatedFatPerServing: '',
     energyPer100g: '',
     proteinPer100g: '',
     fatPer100g: '',
     carbsPer100g: '',
     fiberPer100g: '',
+    saturatedFatPer100g: '',
     rawText: ocrLines.join('\n'),
   };
 
@@ -54,6 +56,13 @@ export function parseNutritionLabel(ocrLines: string[]): ScannedNutrition {
   );
   result.fatPerServing = fat.perServing;
   result.fatPer100g = fat.per100g;
+
+  const saturatedFat = extractNutrientValues(
+    ['saturated fat', 'saturates', 'sat fat', 'saturated'],
+    tableLines
+  );
+  result.saturatedFatPerServing = saturatedFat.perServing;
+  result.saturatedFatPer100g = saturatedFat.per100g;
 
   const carbs = extractNutrientValues(
     ['carbohydrate', 'carbohydrates', 'carbs', 'carb'],

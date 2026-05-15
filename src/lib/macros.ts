@@ -6,7 +6,11 @@ export interface DailyTargets {
   fatG: number;
   carbsG: number;
   fiberG: number;
+  saturatedFatG: number;
 }
+
+// 1g saturated fat = 9 kcal = 9 * 4.184 kJ
+const KJ_PER_G_FAT = 9 * 4.184;
 
 // --- BMR via Mifflin-St Jeor (returns kcal) ---
 function calculateBmrKcal(
@@ -98,5 +102,12 @@ export function calculateDailyTargets(
   // Fiber: Australian RDI (NHMRC)
   const fiberG = gender === 'male' ? 30 : 25;
 
-  return { energyKj: targetKj, proteinG, fatG, carbsG, fiberG };
+  // Saturated fat: WHO/AHA upper limit of <10% of daily energy
+  const saturatedFatG = Math.round((targetKj * 0.10) / KJ_PER_G_FAT);
+
+  return { energyKj: targetKj, proteinG, fatG, carbsG, fiberG, saturatedFatG };
+}
+
+export function saturatedFatTargetFromEnergyKj(energyKj: number): number {
+  return Math.round((energyKj * 0.10) / KJ_PER_G_FAT);
 }

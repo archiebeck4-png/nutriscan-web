@@ -39,9 +39,9 @@ export default function BarcodeLookupPage() {
           const emptyNutrition = {
             foodName: '', servingSize: '', servingsPerPackage: '',
             energyPerServing: '', proteinPerServing: '', fatPerServing: '',
-            carbsPerServing: '', fiberPerServing: '',
+            carbsPerServing: '', fiberPerServing: '', saturatedFatPerServing: '',
             energyPer100g: '', proteinPer100g: '', fatPer100g: '',
-            carbsPer100g: '', fiberPer100g: '', rawText: '',
+            carbsPer100g: '', fiberPer100g: '', saturatedFatPer100g: '', rawText: '',
           };
           setScanData({ nutrition: emptyNutrition, imageBlob: null, barcode: code, fromRecipe: recipeFlag });
           router.replace('/add/unknown-barcode');
@@ -51,9 +51,9 @@ export default function BarcodeLookupPage() {
         const emptyNutrition = {
           foodName: '', servingSize: '', servingsPerPackage: '',
           energyPerServing: '', proteinPerServing: '', fatPerServing: '',
-          carbsPerServing: '', fiberPerServing: '',
+          carbsPerServing: '', fiberPerServing: '', saturatedFatPerServing: '',
           energyPer100g: '', proteinPer100g: '', fatPer100g: '',
-          carbsPer100g: '', fiberPer100g: '', rawText: '',
+          carbsPer100g: '', fiberPer100g: '', saturatedFatPer100g: '', rawText: '',
         };
         setScanData({ nutrition: emptyNutrition, imageBlob: null, barcode: code, fromRecipe: recipeFlag });
         router.replace('/add/unknown-barcode');

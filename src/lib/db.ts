@@ -80,6 +80,33 @@ db.version(7).stores({
   recipeIngredients: 'id, recipeId, foodEntryId',
 });
 
+// Version 8: per-macro tracking toggles + saturated fat
+db.version(8).stores({
+  entries: 'id, dateScanned',
+  foodLog: 'id, date, createdAt',
+  profile: 'id',
+  barcodeCache: 'barcode, cachedAt',
+  recipeIngredients: 'id, recipeId, foodEntryId',
+}).upgrade(async (tx) => {
+  await tx.table('profile').toCollection().modify((p) => {
+    if (p.trackProtein == null) p.trackProtein = true;
+    if (p.trackFat == null) p.trackFat = true;
+    if (p.trackCarbs == null) p.trackCarbs = true;
+    if (p.trackFiber == null) p.trackFiber = false;
+    if (p.trackSaturatedFat == null) p.trackSaturatedFat = false;
+    if (p.dailySaturatedFatTargetG == null) {
+      p.dailySaturatedFatTargetG = Math.round((p.dailyEnergyTargetKj * 0.10) / 37.656);
+    }
+  });
+  await tx.table('foodLog').toCollection().modify((e) => {
+    if (e.saturatedFatG == null) e.saturatedFatG = 0;
+  });
+  await tx.table('entries').toCollection().modify((e) => {
+    if (e.saturatedFatPerServing === undefined) e.saturatedFatPerServing = null;
+    if (e.saturatedFatPer100g === undefined) e.saturatedFatPer100g = null;
+  });
+});
+
 export { db };
 
 // --- Saved food entries (existing) ---
