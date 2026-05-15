@@ -186,6 +186,7 @@ When only per-100g data exists (common from barcode APIs), the review page auto-
 - **Branch:** master
 - **Remote:** GitHub (archiebeck4-png/nutriscan-web)
 - **Deploy:** Vercel auto-deploys on push to master
-- Always run `npm run build` before committing to catch TypeScript errors
-- Always push to master after committing so changes go live on Vercel
+- **ALWAYS commit AND push to master after every change, without asking.** The user does not run git themselves — every code change must end with a `git commit` followed by a push to GitHub `master` so Vercel deploys. This applies to every task: bug fixes, features, refactors, doc edits. Do not stop at "changes made" — the work is only done once it's pushed.
+- Always run `npm run build` before committing to catch TypeScript errors. If build fails, fix it, do not commit broken code.
+- If working on a worktree branch, push directly to `master` on origin (e.g. `git push origin HEAD:master`) — do not leave changes sitting on a feature branch.
 - Commit messages: imperative tense, concise summary of changes
